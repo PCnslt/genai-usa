@@ -1,9 +1,9 @@
 /* ---- CONFIG (filled during deploy) ---- */
 const CONFIG = {
-  cognitoDomain: "https://genai-usa-portal.auth.us-east-2.amazoncognito.com",
-  clientId: "1it7qevrl4ebdev0pvbjtbm8ma",
+  cognitoDomain: "https://genai-usa-auth.auth.us-east-2.amazoncognito.com",
+  clientId: "532f118f0hllb65dammopv9lgv",
   redirectUri: window.location.origin + window.location.pathname,
-  apiUrl: "https://jtma0ta4ah.execute-api.us-east-2.amazonaws.com",
+  apiUrl: "https://fj2i0k2wvg.execute-api.us-east-2.amazonaws.com",
 };
 
 /* ---- auth (Cognito hosted UI, implicit grant) ---- */

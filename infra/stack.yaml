@@ -1,0 +1,232 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Generative Artificial Intelligence customer platform — auth, data, API, RAG bot (free-tier friendly)
+
+# ============ DynamoDB ============
+Resources:
+  ProductsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: genai-products
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - { AttributeName: product_id, AttributeType: S }
+      KeySchema:
+        - { AttributeName: product_id, KeyType: HASH }
+
+  OrdersTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: genai-orders
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - { AttributeName: order_id, AttributeType: S }
+        - { AttributeName: customer_id, AttributeType: S }
+      KeySchema:
+        - { AttributeName: order_id, KeyType: HASH }
+      GlobalSecondaryIndexes:
+        - IndexName: customer-index
+          KeySchema: [{ AttributeName: customer_id, KeyType: HASH }]
+          Projection: { ProjectionType: ALL }
+
+  EntitlementsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: genai-entitlements
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - { AttributeName: customer_id, AttributeType: S }
+        - { AttributeName: product_id, AttributeType: S }
+      KeySchema:
+        - { AttributeName: customer_id, KeyType: HASH }
+        - { AttributeName: product_id, KeyType: RANGE }
+
+  ContractsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: genai-contracts
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - { AttributeName: contract_id, AttributeType: S }
+        - { AttributeName: customer_id, AttributeType: S }
+      KeySchema:
+        - { AttributeName: contract_id, KeyType: HASH }
+      GlobalSecondaryIndexes:
+        - IndexName: customer-index
+          KeySchema: [{ AttributeName: customer_id, KeyType: HASH }]
+          Projection: { ProjectionType: ALL }
+
+  BillingTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: genai-billing
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - { AttributeName: payment_id, AttributeType: S }
+        - { AttributeName: customer_id, AttributeType: S }
+      KeySchema:
+        - { AttributeName: payment_id, KeyType: HASH }
+      GlobalSecondaryIndexes:
+        - IndexName: customer-index
+          KeySchema: [{ AttributeName: customer_id, KeyType: HASH }]
+          Projection: { ProjectionType: ALL }
+
+  ChatTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: genai-chat
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - { AttributeName: session_id, AttributeType: S }
+        - { AttributeName: ts, AttributeType: N }
+      KeySchema:
+        - { AttributeName: session_id, KeyType: HASH }
+        - { AttributeName: ts, KeyType: RANGE }
+
+  # ============ Cognito (auth + roles) ============
+  UserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: genai-users
+      UsernameAttributes: [email]
+      AutoVerifiedAttributes: [email]
+
+  UserPoolDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      Domain: genai-usa-auth
+      UserPoolId: !Ref UserPool
+
+  UserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: genai-portal
+      UserPoolId: !Ref UserPool
+      GenerateSecret: false
+      SupportedIdentityProviders: [COGNITO]
+      CallbackURLs:
+        - https://d2smtb2zyqn37z.cloudfront.net/app/
+        - https://genai-usa.com/app/
+        - https://localhost/app/
+      LogoutURLs:
+        - https://d2smtb2zyqn37z.cloudfront.net/app/
+        - https://genai-usa.com/app/
+      AllowedOAuthFlows: [implicit]
+      AllowedOAuthScopes: [openid, email, profile]
+      AllowedOAuthFlowsUserPoolClient: true
+
+  CustomersGroup:
+    Type: AWS::Cognito::UserPoolGroup
+    Properties: { GroupName: customers, UserPoolId: !Ref UserPool }
+  EmployeesGroup:
+    Type: AWS::Cognito::UserPoolGroup
+    Properties: { GroupName: employees, UserPoolId: !Ref UserPool }
+  AdminsGroup:
+    Type: AWS::Cognito::UserPoolGroup
+    Properties: { GroupName: admins, UserPoolId: !Ref UserPool }
+
+  # ============ IAM ============
+  LambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: genai-lambda-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: { Service: lambda.amazonaws.com }
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: dynamodb-bedrock
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: [dynamodb:*, bedrock:InvokeModel, bedrock:Retrieve]
+                Resource: '*'
+
+  # ============ Lambda (API backend) ============
+  ApiFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: genai-api
+      Runtime: python3.11
+      Handler: handlers.lambda_handler
+      Role: !GetAtt LambdaRole.Arn
+      Timeout: 30
+      MemorySize: 256
+      Code: ../backend/genai-api.zip
+
+  # ============ API Gateway (HTTP API) ============
+  HttpApi:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      Name: genai-api
+      ProtocolType: HTTP
+      CorsConfiguration:
+        AllowOrigins: ['*']
+        AllowMethods: ['*']
+        AllowHeaders: ['*']
+
+  Authorizer:
+    Type: AWS::ApiGatewayV2::Authorizer
+    Properties:
+      ApiId: !Ref HttpApi
+      Name: cognito
+      AuthorizerType: JWT
+      IdentitySource: ['$request.header.Authorization']
+      JwtConfiguration:
+        Issuer: !Sub 'https://cognito-idp.${AWS::Region}.amazonaws.com/${UserPool}'
+        Audience: [!Ref UserPoolClient]
+
+  Integration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref HttpApi
+      IntegrationType: AWS_PROXY
+      IntegrationMethod: POST
+      PayloadFormatVersion: '2.0'
+      IntegrationUri: !GetAtt ApiFunction.Arn
+
+  CatchAllRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: ANY /{proxy+}
+      Target: !Sub 'integrations/${Integration}'
+      AuthorizationType: JWT
+      AuthorizerId: !Ref Authorizer
+
+  WebhookRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: POST /webhooks/payments
+      Target: !Sub 'integrations/${Integration}'
+      AuthorizationType: NONE
+
+  Stage:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties:
+      ApiId: !Ref HttpApi
+      StageName: $default
+      AutoDeploy: true
+
+  LambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref ApiFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${HttpApi}/*/*'
+
+Outputs:
+  UserPoolId:
+    Value: !Ref UserPool
+  UserPoolClientId:
+    Value: !Ref UserPoolClient
+  ApiUrl:
+    Value: !Sub 'https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com'
+  CognitoDomain:
+    Value: !Sub 'https://${UserPoolDomain}.auth.${AWS::Region}.amazoncognito.com'
