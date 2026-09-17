@@ -5,3 +5,9 @@ node_modules/
 .env.*
 cloudfront-config.json
 bucket-policy.json
+
+# build artifacts
+backend/build/
+backend/genai-api.zip
+__pycache__/
+*.pyc

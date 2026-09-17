@@ -19,6 +19,25 @@ dashboards for customers / employees / admins. Everything on AWS free tier.
 **Fixed cost ≈ $0–5/mo** (Cognito/Lambda/DynamoDB/S3 all free tier; Bedrock is
 usage-priced, ~$1–5/mo at low volume; Stripe is ~2.9% + $0.30 per sale only).
 
+## Status — all 5 phases shipped (2026-09-17)
+
+- **Phase 1** ✅ Cognito (3 groups) + 7 DynamoDB tables + portal shell + auth.
+- **Phase 2** ✅ `payments.py` (mock + stripe, swappable + idempotent), 29-item
+  catalog seeded, `POST /orders` → checkout → webhook → grant, `GET /products`.
+- **Phase 3** ✅ Clickwrap ToS (`terms.py` v1.0), `POST /contracts/accept`,
+  `GET /contracts/latest`, checkout gated on accepted active version.
+- **Phase 4** ✅ `POST /chat` grounds in catalog + customer entitlements;
+  Bedrock (Claude) when `BEDROCK_MODEL_ID` is set, rule-based fallback otherwise.
+- **Phase 5** ✅ Ops console: `GET /ops/orders`, `POST /ops/orders/{id}/fulfill`,
+  support inbox (`/support`, `/ops/support`, `/ops/support/{id}/reply`),
+  `GET /ops/contracts`; admin: `POST/DELETE /ops/products`, `GET /ops/users`,
+  `POST /ops/users/{u}/role`, `GET /ops/finance`, `POST /ops/contracts/template`.
+
+**Tables (8):** products, orders, entitlements, contracts, billing, chat,
+support, meta. **Switching to Stripe:** `aws cloudformation deploy …
+--parameter-overrides PaymentProvider=stripe StripeSecretKey=… StripeWebhookSecret=…`
+(keys are `NoEcho`, never committed).
+
 ## Data model (DynamoDB)
 
 - `genai-products` — catalog. PK `product_id`.

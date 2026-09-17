@@ -29,3 +29,7 @@ aws cloudformation deploy \
 echo "=== stack outputs ==="
 aws cloudformation describe-stacks --stack-name "$STACK" --region "$R" \
   --query 'Stacks[0].Outputs' --output table
+
+# 4) seed the product catalog (idempotent put_item)
+echo "=== seeding catalog ==="
+AWS_REGION="$R" python3 backend/seed.py

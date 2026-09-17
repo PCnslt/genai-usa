@@ -1,5 +1,26 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Generative Artificial Intelligence customer platform — auth, data, API, RAG bot (free-tier friendly)
+Description: Generative Artificial Intelligence customer platform — auth, data, API, RAG bot, ops (free-tier friendly)
+
+Parameters:
+  PaymentProvider:
+    Type: String
+    Default: mock
+    AllowedValues: [mock, stripe]
+    Description: Active payment provider (mock works with no keys).
+  StripeSecretKey:
+    Type: String
+    Default: ''
+    NoEcho: true
+    Description: Stripe secret key (leave empty while provider=mock).
+  StripeWebhookSecret:
+    Type: String
+    Default: ''
+    NoEcho: true
+    Description: Stripe webhook signing secret (leave empty while provider=mock).
+  BedrockModelId:
+    Type: String
+    Default: ''
+    Description: Bedrock model id for the RAG bot (e.g. anthropic.claude-3-haiku-20240307-v1:0). Empty = rule-based fallback.
 
 # ============ DynamoDB ============
 Resources:
@@ -82,6 +103,35 @@ Resources:
         - { AttributeName: session_id, KeyType: HASH }
         - { AttributeName: ts, KeyType: RANGE }
 
+  SupportTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: genai-support
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - { AttributeName: message_id, AttributeType: S }
+        - { AttributeName: customer_id, AttributeType: S }
+        - { AttributeName: status, AttributeType: S }
+      KeySchema:
+        - { AttributeName: message_id, KeyType: HASH }
+      GlobalSecondaryIndexes:
+        - IndexName: customer-index
+          KeySchema: [{ AttributeName: customer_id, KeyType: HASH }]
+          Projection: { ProjectionType: ALL }
+        - IndexName: status-index
+          KeySchema: [{ AttributeName: status, KeyType: HASH }]
+          Projection: { ProjectionType: ALL }
+
+  MetaTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: genai-meta
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - { AttributeName: key, AttributeType: S }
+      KeySchema:
+        - { AttributeName: key, KeyType: HASH }
+
   # ============ Cognito (auth + roles) ============
   UserPool:
     Type: AWS::Cognito::UserPool
@@ -113,6 +163,9 @@ Resources:
       AllowedOAuthFlows: [implicit]
       AllowedOAuthScopes: [openid, email, profile]
       AllowedOAuthFlowsUserPoolClient: true
+      ExplicitAuthFlows:
+        - ALLOW_ADMIN_USER_PASSWORD_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
 
   CustomersGroup:
     Type: AWS::Cognito::UserPoolGroup
@@ -145,6 +198,20 @@ Resources:
               - Effect: Allow
                 Action: [dynamodb:*, bedrock:InvokeModel, bedrock:Retrieve]
                 Resource: '*'
+        - PolicyName: cognito-admin
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - cognito-idp:ListUsers
+                  - cognito-idp:AdminGetUser
+                  - cognito-idp:AdminListGroupsForUser
+                  - cognito-idp:AdminAddUserToGroup
+                  - cognito-idp:AdminRemoveUserFromGroup
+                  - cognito-idp:AdminEnableUser
+                  - cognito-idp:AdminDisableUser
+                Resource: !Sub 'arn:aws:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${UserPool}'
 
   # ============ Lambda (API backend) ============
   ApiFunction:
@@ -157,6 +224,21 @@ Resources:
       Timeout: 30
       MemorySize: 256
       Code: ../backend/genai-api.zip
+      Environment:
+        Variables:
+          PROVIDER_NAME: !Ref PaymentProvider
+          STRIPE_SECRET_KEY: !Ref StripeSecretKey
+          STRIPE_WEBHOOK_SECRET: !Ref StripeWebhookSecret
+          BEDROCK_MODEL_ID: !Ref BedrockModelId
+          USER_POOL_ID: !Ref UserPool
+          TABLE_PRODUCTS: genai-products
+          TABLE_ORDERS: genai-orders
+          TABLE_ENTITLEMENTS: genai-entitlements
+          TABLE_CONTRACTS: genai-contracts
+          TABLE_BILLING: genai-billing
+          TABLE_CHAT: genai-chat
+          TABLE_SUPPORT: genai-support
+          TABLE_META: genai-meta
 
   # ============ API Gateway (HTTP API) ============
   HttpApi:
@@ -197,6 +279,16 @@ Resources:
       Target: !Sub 'integrations/${Integration}'
       AuthorizationType: JWT
       AuthorizerId: !Ref Authorizer
+
+  # CORS preflight (OPTIONS) must NOT require auth — a dedicated no-auth route
+  # beats the ANY /{proxy+} catch-all so browser preflights get 200 + headers.
+  OptionsRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: OPTIONS /{proxy+}
+      Target: !Sub 'integrations/${Integration}'
+      AuthorizationType: NONE
 
   WebhookRoute:
     Type: AWS::ApiGatewayV2::Route

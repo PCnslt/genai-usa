@@ -1,4 +1,4 @@
-"""DynamoDB access layer + table schema. Free-tier friendly (single tables)."""
+"""DynamoDB access layer + table schema. Free-tier friendly (PAY_PER_REQUEST)."""
 from __future__ import annotations
 
 import os
@@ -15,6 +15,8 @@ _TABLES = {
     "contracts": os.environ.get("TABLE_CONTRACTS", "genai-contracts"),
     "billing": os.environ.get("TABLE_BILLING", "genai-billing"),
     "chat": os.environ.get("TABLE_CHAT", "genai-chat"),
+    "support": os.environ.get("TABLE_SUPPORT", "genai-support"),
+    "meta": os.environ.get("TABLE_META", "genai-meta"),
 }
 
 _ddb = boto3.resource("dynamodb")
@@ -32,12 +34,26 @@ def new_id(prefix: str) -> str:
     return f"{prefix}_{uuid.uuid4().hex[:16]}"
 
 
-# ---- products ----
-def put_product(product_id: str, name: str, price_cents: int, kind: str, **extra) -> None:
-    table("products").put_item(Item={
-        "product_id": product_id, "name": name, "price_cents": price_cents,
-        "kind": kind, "updated_at": now(), **extra,
-    })
+# ---- products (catalog) ----
+def list_products() -> list[dict]:
+    items = table("products").scan().get("Items", [])
+    items.sort(key=lambda p: p.get("product_id", ""))
+    return items
+
+
+def put_product(product_id: str, name: str, price_cents: int, kind: str,
+                description: str = "", recurring: bool = False,
+                monthly_cents: int = 0) -> None:
+    item = {
+        "product_id": product_id, "name": name, "price_cents": int(price_cents),
+        "kind": kind, "description": description, "recurring": bool(recurring),
+        "monthly_cents": int(monthly_cents or 0), "updated_at": now(),
+    }
+    table("products").put_item(Item=item)
+
+
+def delete_product(product_id: str) -> None:
+    table("products").delete_item(Key={"product_id": product_id})
 
 
 def get_product(product_id: str) -> Optional[dict]:
@@ -62,8 +78,33 @@ def update_order_status(order_id: str, status: str) -> None:
     )
 
 
+def set_fulfillment(order_id: str, status: str) -> None:
+    """Employee action: move delivery status (pending -> in_progress -> delivered)."""
+    table("orders").update_item(
+        Key={"order_id": order_id},
+        UpdateExpression="SET fulfillment_status = :s, updated_at = :t",
+        ExpressionAttributeValues={":s": status, ":t": now()},
+    )
+
+
+def list_orders(customer_id: str) -> list[dict]:
+    r = table("orders").query(
+        IndexName="customer-index",
+        KeyConditionExpression="customer_id = :c",
+        ExpressionAttributeValues={":c": customer_id},
+    )
+    return r.get("Items", [])
+
+
+def list_all_orders() -> list[dict]:
+    items = table("orders").scan().get("Items", [])
+    items.sort(key=lambda o: o.get("created_at", 0), reverse=True)
+    return items
+
+
 # ---- entitlements ----
-def grant(customer_id: str, product_id: str, source_order_id: str, meta: Optional[dict] = None) -> None:
+def grant(customer_id: str, product_id: str, source_order_id: str,
+          meta: Optional[dict] = None) -> None:
     table("entitlements").put_item(Item={
         "customer_id": customer_id,
         "product_id": product_id,
@@ -81,24 +122,25 @@ def list_entitlements(customer_id: str) -> list[dict]:
     return r.get("Items", [])
 
 
-def list_orders(customer_id: str) -> list[dict]:
-    r = table("orders").query(
-        IndexName="customer-index",
-        KeyConditionExpression="customer_id = :c",
-        ExpressionAttributeValues={":c": customer_id},
-    )
-    return r.get("Items", [])
-
-
-# ---- contracts ----
+# ---- contracts (clickwrap) ----
 def record_contract(customer_id: str, contract_type: str, version: str,
                     ip: str, user_agent: str) -> str:
     cid = new_id("ctr")
     table("contracts").put_item(Item={
-        "contract_id": cid, "customer_id": customer_id, "contract_type": contract_type,
-        "version": version, "accepted_at": now(), "ip": ip, "user_agent": user_agent,
+        "contract_id": cid, "customer_id": customer_id,
+        "contract_type": contract_type, "version": version,
+        "accepted_at": now(), "ip": ip, "user_agent": user_agent,
     })
     return cid
+
+
+def has_accepted(customer_id: str, version: str) -> bool:
+    r = table("contracts").query(
+        IndexName="customer-index",
+        KeyConditionExpression="customer_id = :c",
+        ExpressionAttributeValues={":c": customer_id},
+    )
+    return any(c.get("version") == version for c in r.get("Items", []))
 
 
 def list_contracts(customer_id: str) -> list[dict]:
@@ -108,6 +150,12 @@ def list_contracts(customer_id: str) -> list[dict]:
         ExpressionAttributeValues={":c": customer_id},
     )
     return r.get("Items", [])
+
+
+def list_all_contracts() -> list[dict]:
+    items = table("contracts").scan().get("Items", [])
+    items.sort(key=lambda c: c.get("accepted_at", 0), reverse=True)
+    return items
 
 
 # ---- billing (idempotent by event id) ----
@@ -129,3 +177,85 @@ def record_charge(event_id: str, order_id: str, customer_id: str,
         return True
     except _ddb.meta.client.exceptions.ConditionalCheckFailedException:
         return False
+
+
+def list_billing(customer_id: str) -> list[dict]:
+    r = table("billing").query(
+        IndexName="customer-index",
+        KeyConditionExpression="customer_id = :c",
+        ExpressionAttributeValues={":c": customer_id},
+    )
+    return r.get("Items", [])
+
+
+def finance_summary() -> dict:
+    items = table("billing").scan().get("Items", [])
+    total = sum(int(i.get("amount_cents", 0)) for i in items)
+    by_provider: dict[str, int] = {}
+    for i in items:
+        p = i.get("provider", "unknown")
+        by_provider[p] = by_provider.get(p, 0) + int(i.get("amount_cents", 0))
+    return {
+        "total_charges": len(items),
+        "total_revenue_cents": total,
+        "by_provider_cents": by_provider,
+    }
+
+
+# ---- support (customer -> ops messaging) ----
+def send_support(customer_id: str, email: str, subject: str, body: str) -> str:
+    mid = new_id("sup")
+    table("support").put_item(Item={
+        "message_id": mid, "customer_id": customer_id, "email": email,
+        "subject": subject, "body": body, "status": "open",
+        "reply": "", "created_at": now(),
+    })
+    return mid
+
+
+def list_support_customer(customer_id: str) -> list[dict]:
+    r = table("support").query(
+        IndexName="customer-index",
+        KeyConditionExpression="customer_id = :c",
+        ExpressionAttributeValues={":c": customer_id},
+    )
+    items = r.get("Items", [])
+    items.sort(key=lambda m: m.get("created_at", 0), reverse=True)
+    return items
+
+
+def list_open_support() -> list[dict]:
+    r = table("support").query(
+        IndexName="status-index",
+        KeyConditionExpression="#s = :s",
+        ExpressionAttributeNames={"#s": "status"},
+        ExpressionAttributeValues={":s": "open"},
+    )
+    items = r.get("Items", [])
+    items.sort(key=lambda m: m.get("created_at", 0))
+    return items
+
+
+def reply_support(message_id: str, reply: str) -> None:
+    table("support").update_item(
+        Key={"message_id": message_id},
+        UpdateExpression="SET reply = :r, #s = :s, resolved_at = :t",
+        ExpressionAttributeNames={"#s": "status"},
+        ExpressionAttributeValues={":r": reply, ":s": "resolved", ":t": now()},
+    )
+
+
+# ---- meta (runtime config, e.g. contract template override) ----
+def get_meta(key: str) -> Optional[str]:
+    return table("meta").get_item(Key={"key": key}).get("Item", {}).get("value")
+
+
+def set_meta(key: str, value: str) -> None:
+    table("meta").put_item(Item={"key": key, "value": value, "updated_at": now()})
+
+
+# ---- chat history (optional persistence) ----
+def save_chat(session_id: str, role: str, text: str) -> None:
+    table("chat").put_item(Item={
+        "session_id": session_id, "ts": now(), "role": role, "text": text,
+    })

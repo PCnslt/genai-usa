@@ -17,16 +17,18 @@
   <div class="brand">Generative <span>AI</span></div>
   <div class="top-right">
     <span id="whoami" class="muted"></span>
+    <span id="roleBadge" class="role muted">…</span>
+    <button id="opsToggle" class="btn ghost" style="display:none">Ops console</button>
     <a href="/" class="btn ghost">← Site</a>
     <button id="logout" class="btn ghost">Sign out</button>
   </div>
 </header>
 
-<div class="layout">
+<!-- ============ CUSTOMER VIEW ============ -->
+<div id="customerView" class="layout">
   <aside class="sidebar">
     <div class="side-head">
       <h2>My purchases</h2>
-      <span id="roleBadge" class="role muted">customer</span>
     </div>
     <ul id="entitlements" class="ents"></ul>
   </aside>
@@ -37,9 +39,15 @@
       <p class="muted small">Ask about your purchase, our services, or your plan — the assistant knows what you bought.</p>
       <div id="chatlog" class="chatlog"></div>
       <form id="chatform" class="chatform">
-        <input id="chatinput" placeholder="e.g. What did I buy? How do I get my chatbot?" autocomplete="off">
+        <input id="chatinput" placeholder="e.g. What did I buy? How much is a chatbot?" autocomplete="off">
         <button class="btn" type="submit">Send</button>
       </form>
+    </section>
+
+    <section class="card">
+      <h2>Shop</h2>
+      <p class="muted small">Products, services, and monthly plans — delivered by our vetted expert network.</p>
+      <div id="shop" class="shop"></div>
     </section>
 
     <section class="card">
@@ -52,7 +60,95 @@
       <h2>Orders</h2>
       <ul id="orders" class="orders"></ul>
     </section>
+
+    <section class="card">
+      <h2>Agreement</h2>
+      <p class="muted small">Our Terms of Service &amp; Service Agreement. You must accept the current version before purchasing.</p>
+      <pre id="termsText" class="terms"></pre>
+      <div id="termsStatus" class="muted small" style="margin-bottom:10px"></div>
+      <button id="acceptTerms" class="btn">Accept terms</button>
+    </section>
+
+    <section class="card">
+      <h2>Support</h2>
+      <p class="muted small">Message our team — we reply inside your portal.</p>
+      <form id="supportForm" class="chatform" style="margin-bottom:12px">
+        <input id="supportInput" placeholder="Describe your issue…" autocomplete="off">
+        <button class="btn" type="submit">Send</button>
+      </form>
+      <div id="supportThread" class="thread"></div>
+    </section>
   </main>
+</div>
+
+<!-- ============ OPS VIEW (employees + admins) ============ -->
+<div id="opsView" class="layout" style="display:none">
+  <aside class="sidebar">
+    <div class="side-head"><h2>Operations</h2></div>
+    <ul class="opsnav" id="opsNav">
+      <li data-panel="opsOrders" class="active">Orders</li>
+      <li data-panel="opsSupport">Support inbox</li>
+      <li data-panel="opsContracts">Contracts</li>
+      <li data-panel="opsProducts" class="adminOnly">Products</li>
+      <li data-panel="opsUsers" class="adminOnly">Users</li>
+      <li data-panel="opsFinance" class="adminOnly">Finance</li>
+    </ul>
+  </aside>
+
+  <main class="content">
+    <section class="card panel" id="opsOrders">
+      <h2>All orders</h2>
+      <p class="muted small">Advance fulfillment status as work moves to delivery.</p>
+      <div id="opsOrdersList" class="opslist"></div>
+    </section>
+
+    <section class="card panel" id="opsSupport" style="display:none">
+      <h2>Support inbox</h2>
+      <p class="muted small">Open customer messages — reply to resolve.</p>
+      <div id="opsSupportList" class="opslist"></div>
+    </section>
+
+    <section class="card panel" id="opsContracts" style="display:none">
+      <h2>Accepted contracts</h2>
+      <div id="opsContractsList" class="opslist"></div>
+    </section>
+
+    <section class="card panel" id="opsProducts" style="display:none">
+      <h2>Products &amp; pricing</h2>
+      <form id="productForm" class="productform">
+        <input id="pfId" placeholder="product_id" autocomplete="off">
+        <input id="pfName" placeholder="Name" autocomplete="off">
+        <input id="pfPrice" type="number" placeholder="price (USD)" autocomplete="off">
+        <input id="pfMonthly" type="number" placeholder="monthly (USD, optional)" autocomplete="off">
+        <select id="pfKind"><option value="product">product</option><option value="service">service</option><option value="plan">plan</option></select>
+        <button class="btn" type="submit">Save</button>
+      </form>
+      <div id="opsProductsList" class="opslist"></div>
+    </section>
+
+    <section class="card panel" id="opsUsers" style="display:none">
+      <h2>Users</h2>
+      <p class="muted small">Assign roles (customers / employees / admins).</p>
+      <div id="opsUsersList" class="opslist"></div>
+    </section>
+
+    <section class="card panel" id="opsFinance" style="display:none">
+      <h2>Finance</h2>
+      <div id="opsFinanceBox" class="muted"></div>
+    </section>
+  </main>
+</div>
+
+<!-- checkout modal -->
+<div id="modal" class="modal" style="display:none">
+  <div class="modal-box">
+    <h3 id="modalTitle">Checkout</h3>
+    <div id="modalBody" class="modal-body"></div>
+    <div class="modal-actions">
+      <button id="modalCancel" class="btn ghost">Cancel</button>
+      <button id="modalConfirm" class="btn">Complete purchase</button>
+    </div>
+  </div>
 </div>
 
 <script src="app.js"></script>
