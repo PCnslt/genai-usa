@@ -42,6 +42,7 @@ from decimal import Decimal
 from typing import Optional
 
 import auth
+import company
 import db
 import identity
 import marketing
@@ -484,6 +485,25 @@ def _public_fallback(msg: str) -> str:
     return f"{marketing.PITCH}\n\n{marketing.PLANS_SUMMARY}\n\n{marketing.CTA}"
 
 
+# ---- staff assistant (dogfood: our own internal knowledge assistant) ----
+def staff_chat(event):
+    _require_staff(event)
+    b = _body(event)
+    msg = b.get("message", "")
+    if not msg:
+        return _err("message required")
+    ctx = company.context() + "\n\nCatalog:\n" + _catalog_summary()
+    if os.environ.get("BEDROCK_MODEL_ID"):
+        return _ok({"answer": _answer(ctx, msg)})
+    # rule-based: match internal docs by topic keyword, else catalog fallback
+    m = msg.lower()
+    for topic, text in company.INTERNAL_DOCS:
+        words = [w for w in re.split(r"[^a-z0-9]+", topic.lower()) if len(w) >= 4]
+        if words and any(w in m for w in words):
+            return _ok({"answer": f"{topic}: {text}"})
+    return _ok({"answer": _fallback(ctx, msg)})
+
+
 # ---- support / relay (customer) ----
 def open_support(event):
     b = _body(event)
@@ -744,6 +764,7 @@ _ROUTES = [
     (("POST", "/contracts/accept"), accept_contract),
     (("POST", "/chat"), chat),
     (("POST", "/chat-public"), chat_public),
+    (("POST", "/staff-chat"), staff_chat),
     (("POST", "/leads"), create_lead),
     (("POST", "/support"), open_support),
     (("GET", "/support"), my_support),

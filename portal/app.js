@@ -601,6 +601,25 @@ el("opsToggle").addEventListener("click", () => {
   setView(toOps ? "ops" : "customer");
 });
 
+el("opsChatform").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const input = el("opsChatinput");
+  const q = input.value.trim();
+  if (!q) return;
+  input.value = "";
+  const log = el("opsChatlog");
+  const add = (html, cls) => {
+    const d = document.createElement("div");
+    d.className = "msg " + cls;
+    d.innerHTML = html;
+    log.appendChild(d);
+    log.scrollTop = 1e9;
+  };
+  add(esc(q), "user");
+  const r = await api("/staff-chat", { method: "POST", body: JSON.stringify({ message: q }) });
+  add(esc(r.answer || "Sorry, something went wrong."), "ai");
+});
+
 el("opsNav").addEventListener("click", (e) => {
   const li = e.target.closest("li");
   if (li && li.dataset.panel) showPanel(li.dataset.panel);
