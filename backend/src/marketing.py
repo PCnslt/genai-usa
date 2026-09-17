@@ -8,11 +8,11 @@ from __future__ import annotations
 
 PITCH = (
     "Generative Artificial Intelligence (genai-usa.com) is a productized AI "
-    "agency. We build and run AI systems for growing businesses — support "
-    "chatbots, AI voice receptionists, lead-qualifiers, workflow automation, "
-    "content engines, and fully managed AI departments — delivered by a vetted "
-    "expert network on fixed scope and fixed price, with a human on every plan. "
-    "Outcomes, not hourly billing."
+    "agency for real estate agents and home-service businesses (plumbers, "
+    "electricians, HVAC, landscapers, roofers, cleaners). We build and run the "
+    "AI systems that capture leads, answer missed calls, fill the schedule, and "
+    "manage reviews — delivered by a vetted expert network on fixed scope and "
+    "fixed price, with a human on every plan. Outcomes, not hourly billing."
 )
 
 HOW_IT_WORKS = [
@@ -37,12 +37,13 @@ GUARANTEES = [
 ]
 
 SERVICES_SUMMARY = (
-    "AI Systems: Missed-Call Recovery, Support & FAQ Chatbot, Inbound "
-    "Lead-Qualifier, Workflow Automation, AI SDR (outbound), Data & Insights. "
-    "Content & Creative: AI Content Engine, AI Video & UGC, AI Branding & "
-    "Visuals, AI Voice & Audio, AI Localization. Strategy: AI-Native Website "
-    "Rebuild, AI Roadmap & Audit, AI Visibility (GEO) Audit, Team Training, "
-    "AI Integration."
+    "Real estate agents: Missed-Call AI Receptionist, Lead-Qualifier Chatbot, "
+    "Lead Follow-Up Automation, CRM Setup (Follow Up Boss/kvCORE), Listing "
+    "Marketing Pack, Virtual Staging + Photo Editing, Local SEO + Google "
+    "Business, Website + IDX. Home services: Missed-Call AI Receptionist, "
+    "Online Booking & Scheduling, Estimate Follow-Up Automation, Google "
+    "Business Profile + Reviews, Local SEO + GEO, Website + Online Booking, "
+    "Before/After Content, Facebook/Google Ads + Lead Gen."
 )
 
 PLANS_SUMMARY = (
