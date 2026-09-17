@@ -40,18 +40,18 @@ GUARANTEES = [
 ]
 
 SERVICES_SUMMARY = (
-    "Conversational AI: Custom AI Chatbot, AI Voice Receptionist, AI Support "
-    "Agent, Outbound AI Calling. Content & Creative AI: AI Content Engine, AI "
-    "Social Media Engine, AI Video & Avatar Production, AI Branding & Creative. "
-    "Sales & Growth AI: AI Lead Generation System, AI Sales Assistant (SDR), AI "
-    "Follow-Up & Nurture, AI CRM & Pipeline Automation. Marketing & Visibility "
-    "AI: AI SEO Content Pipeline, AI Ads & Creative Optimization, AI Review & "
-    "Reputation Management, AI Email Marketing Automation. Operations & "
-    "Back-office AI: AI Document Processing, AI Workflow Automation, AI "
-    "Scheduling & Booking, AI Internal Knowledge Assistant. Data & Intelligence "
-    "AI: AI Analytics Dashboard, Predictive AI & Forecasting, AI Market & "
-    "Competitor Intelligence. Custom AI Engineering: Custom LLM Application, AI "
-    "API & System Integration, Fine-Tuned AI Model, AI Website & Landing Pages."
+    "Chat & Phone: Custom AI Chatbot, AI Voice Receptionist, AI Support Agent, "
+    "AI That Makes Your Calls. Content & Design: AI Content Engine, AI Social "
+    "Media Engine, AI Video & Avatar Production, AI Branding & Creative. "
+    "Sales & Leads: AI Lead Generation System, AI Sales Assistant (SDR), AI "
+    "Follow-Up & Nurture, AI CRM & Pipeline Automation. Marketing & Ads: "
+    "AI SEO Content Pipeline, AI Ads & Creative Optimization, AI Review & "
+    "Reputation Management, AI Email Marketing Automation. Operations & Admin: "
+    "AI Document Processing, AI Workflow Automation, AI Scheduling & Booking, "
+    "AI Internal Knowledge Assistant. Data & Reports: AI Analytics Dashboard, "
+    "Predictive AI & Forecasting, AI Market & Competitor Intelligence. "
+    "Custom Builds: Custom LLM Application, AI API & System Integration, "
+    "Fine-Tuned AI Model, AI Website & Landing Pages."
 )
 
 PLANS_SUMMARY = (
