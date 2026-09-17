@@ -33,3 +33,7 @@ aws cloudformation describe-stacks --stack-name "$STACK" --region "$R" \
 # 4) seed the product catalog (idempotent put_item)
 echo "=== seeding catalog ==="
 AWS_REGION="$R" python3 backend/seed.py
+
+# 5) brand the Cognito hosted UI (logo + CSS)
+echo "=== branding hosted UI ==="
+AWS_REGION="$R" bash infra/hosted-ui.sh

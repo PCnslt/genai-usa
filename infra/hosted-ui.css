@@ -1,0 +1,61 @@
+/* Generative Artificial Intelligence — Cognito Hosted UI theme
+   (blue-purple smoke, matches the marketing site + portal).
+   NOTE: Cognito only accepts plain `-customizable` class selectors here —
+   no element selectors (body/a) and no pseudo-classes (:hover/:focus). */
+
+.background-customizable {
+  background: #0d0a18 !important;
+  background-image: radial-gradient(circle at 50% 0%, rgba(155,92,255,.18), transparent 65%) !important;
+  border: 1px solid rgba(155,92,255,.22) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 20px 60px rgba(0,0,0,.5) !important;
+}
+
+.banner-customizable {
+  background: transparent !important;
+  padding: 26px 0 10px !important;
+}
+
+.logo-customizable {
+  max-width: 320px !important;
+  max-height: 80px !important;
+}
+
+.label-customizable {
+  color: #f4f3fb !important;
+  font-weight: 400 !important;
+  letter-spacing: .02em !important;
+}
+
+.inputField-customizable {
+  background: rgba(255,255,255,.05) !important;
+  border: 1px solid rgba(155,92,255,.32) !important;
+  border-radius: 9px !important;
+  color: #f4f3fb !important;
+  font-size: 15px !important;
+}
+
+.submitButton-customizable {
+  background: linear-gradient(120deg, #4f7cff, #9b5cff) !important;
+  border: none !important;
+  border-radius: 9px !important;
+  color: #ffffff !important;
+  font-weight: 500 !important;
+  font-size: 15px !important;
+}
+
+.textDescription-customizable {
+  color: #8b87a6 !important;
+}
+
+.errorMessage-customizable {
+  color: #ff7b9c !important;
+}
+
+.redirect-customizable {
+  color: #9b5cff !important;
+}
+
+.legalText-customizable {
+  color: #8b87a6 !important;
+}
