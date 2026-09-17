@@ -22,7 +22,8 @@ echo "role: $ROLE"
 
 rm -rf build genai-api.zip
 mkdir -p build
-pip install -r requirements.txt -t build --quiet 2>/dev/null || pip install -r requirements.txt -t build
+# boto3 ships with the Lambda runtime; `stripe` is imported lazily (only when
+# PROVIDER_NAME=stripe). To bundle stripe later: pip install -r requirements.txt -t build
 cp -r src/* build/
 (cd build && zip -qr ../genai-api.zip .)
 
