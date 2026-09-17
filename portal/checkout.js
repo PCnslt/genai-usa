@@ -12,11 +12,15 @@ function renderProduct() {
   $("coTag").textContent = product.category || (product.kind === "plan" ? "Retainer" : product.kind === "service" ? "Service" : "Product");
   $("coDesc").textContent = product.description || "";
   const monthly = Number(product.monthly_cents || 0);
-  const line = monthly
-    ? `${money(product.price_cents)} one-time + ${money(monthly)}/month`
-    : `${money(product.price_cents)}${product.recurring ? "/month" : " one-time"}`;
+  const setup = Number(product.price_cents || 0);
+  const isRetainer = product.recurring && setup === monthly; // pure monthly plan
+  const line = isRetainer
+    ? `${money(monthly)}/month`
+    : (monthly ? `${money(setup)} + ${money(monthly)}/month` : money(setup));
   $("coPrice").textContent = line;
-  $("coPayAmount").textContent = money(product.price_cents) + (monthly ? " + " + money(monthly) + "/mo" : "");
+  $("coPayAmount").textContent = isRetainer
+    ? `${money(monthly)}/mo`
+    : (monthly ? `${money(setup)} + ${money(monthly)}/mo` : money(setup));
 }
 
 function showError(msg) {

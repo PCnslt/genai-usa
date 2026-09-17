@@ -407,6 +407,11 @@ def _fallback(ctx: str, msg: str) -> str:
         monthly = int(p.get("monthly_cents", 0)) / 100
         price_s = f"${price:,.0f}" + (f" + ${monthly:,.0f}/mo" if monthly else "")
         return f"{p['name']} — {p['description']} Price: {price_s}."
+    if any(k in m for k in ("recommend", "what should i buy", "what should i purchase",
+                            "what should i get", "what products should", "what do you suggest",
+                            "suggest", "where do i start", "where do i begin",
+                            "what do i need", "which product", "which service")):
+        return marketing.RECOMMEND
     if any(k in m for k in ("price", "cost", "much", "plan", "pricing")):
         return ("Plans: $4,999/mo AI Concierge · $7,499/mo AI Growth Team · "
                 "$14,499/mo Fractional AI Department · $19,999/mo AI Transformation Partner.")
@@ -414,7 +419,9 @@ def _fallback(ctx: str, msg: str) -> str:
         return "We build support chatbots trained on your docs, live in 7–10 days. See the Shop for pricing."
     if any(k in m for k in ("voice", "call", "receptionist", "missed")):
         return "Our Missed-Call Recovery installs an AI voice receptionist in 48 hours — it answers, books, and confirms by SMS."
-    if any(k in m for k in ("purchase", "bought", "order", "own", "product")):
+    if any(k in m for k in ("what did i buy", "what have i bought", "what did i purchase",
+                            "what have i purchased", "my order", "my orders", "my purchase",
+                            "my purchases", "what do i own", "check my order", "show my order")):
         return "Check the left panel for everything you've purchased. If something's missing, email hello@genai-usa.com."
     return "I can help with our services, plans, and your purchases. Try asking about pricing, chatbots, voice agents, or what you've bought."
 
@@ -470,6 +477,12 @@ def _public_fallback(msg: str) -> str:
         monthly = int(p.get("monthly_cents", 0)) / 100
         price_s = f"${price:,.0f}" + (f" + ${monthly:,.0f}/mo" if monthly else "")
         return f"{p['name']} — {p['description']} Price: {price_s}. {marketing.CTA}"
+    if any(k in m for k in ("recommend", "what should i buy", "what should i purchase",
+                            "what should i get", "what products should", "suggest",
+                            "where do i start", "where do i begin", "what do i need",
+                            "which product", "which service", "for my business",
+                            "i run a", "i own a", "i have a")):
+        return marketing.RECOMMEND + f"\n\n{marketing.CTA}"
     if any(k in m for k in ("price", "cost", "much", "plan", "pricing", "retainer")):
         return f"{marketing.PLANS_SUMMARY} {marketing.CTA}"
     if any(k in m for k in ("how", "work", "process", "step", "timeline")):

@@ -61,6 +61,16 @@ PLANS_SUMMARY = (
     "AI Transformation Partner $19,999 (unlimited systems + on-call engineer)."
 )
 
+RECOMMEND = (
+    "Tell me what you'd like to automate and I'll match you to the right one:\n"
+    "- Answering visitor questions & capturing leads → Website AI Chatbot or Custom AI Chatbot.\n"
+    "- Questions on your docs & policies → Ask My Docs AI Assistant.\n"
+    "- Answering your phone & booking → AI Voice Receptionist.\n"
+    "- Finding & qualifying leads → AI Lead Generation System or AI Sales Assistant (SDR).\n"
+    "- Content, SEO & ads → AI SEO Content Pack or AI SEO Content Pipeline.\n"
+    "Most teams start with a Website AI Chatbot — it answers questions and captures names & emails 24/7. What are you trying to get off your plate?"
+)
+
 CTA = "Want a quote or a demo? Head to the Plans page or use Contact — we'll scope it and reply fast."
 
 
