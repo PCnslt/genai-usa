@@ -1,56 +1,86 @@
-/* ---- CONFIG (filled during deploy) ---- */
+/* ---- CONFIG ---- */
 const CONFIG = {
-  cognitoDomain: "https://genai-usa-auth.auth.us-east-2.amazoncognito.com",
-  clientId: "532f118f0hllb65dammopv9lgv",
-  redirectUri: window.location.origin + window.location.pathname,
   apiUrl: "https://fj2i0k2wvg.execute-api.us-east-2.amazonaws.com",
 };
 
-/* ---- auth (Cognito hosted UI, implicit grant) ---- */
-function login() {
-  const url =
-    `${CONFIG.cognitoDomain}/oauth2/authorize` +
-    `?client_id=${CONFIG.clientId}` +
-    `&response_type=token` +
-    `&scope=openid+email+profile` +
-    `&redirect_uri=${encodeURIComponent(CONFIG.redirectUri)}`;
-  window.location.href = url;
-}
-
-function parseHash() {
-  const p = new URLSearchParams(window.location.hash.substring(1));
-  if (p.get("id_token")) {
-    localStorage.setItem(
-      "gai_tokens",
-      JSON.stringify({ id: p.get("id_token"), access: p.get("access_token") })
-    );
-    history.replaceState(null, "", window.location.pathname);
-  }
-}
-
-function tokens() {
-  try { return JSON.parse(localStorage.getItem("gai_tokens")); } catch (_) { return null; }
-}
+/* ---- Cognito (custom auth UI via amazon-cognito-identity-js) ---- */
+const userPool = new AmazonCognitoIdentity.CognitoUserPool({
+  UserPoolId: "us-east-2_Ft3gk0RP8",
+  ClientId: "532f118f0hllb65dammopv9lgv",
+});
 
 function decodeJwt(token) {
   try { return JSON.parse(atob(token.split(".")[1])); } catch (_) { return {}; }
 }
 
+function currentCognitoUser() { return userPool.getCurrentUser(); }
+
+function getSession() {
+  return new Promise((resolve, reject) => {
+    const u = currentCognitoUser();
+    if (!u) return reject(new Error("not logged in"));
+    u.getSession((err, session) => (err ? reject(err) : resolve(session)));
+  });
+}
+
+async function getAccessToken() {
+  const s = await getSession();
+  return s.getAccessToken().getJwtToken();
+}
+
+function signIn(email, password) {
+  return new Promise((resolve, reject) => {
+    const details = new AmazonCognitoIdentity.AuthenticationDetails({ Username: email, Password: password });
+    new AmazonCognitoIdentity.CognitoUser({ Username: email, Pool: userPool })
+      .authenticateUser(details, {
+        onSuccess: resolve,
+        onFailure: reject,
+        newPasswordRequired: () => reject(new Error("Password change required — contact support.")),
+      });
+  });
+}
+
+function signUp(email, password) {
+  return new Promise((resolve, reject) => {
+    userPool.signUp(email, password, [{ Name: "email", Value: email }], null,
+      (err, result) => (err ? reject(err) : resolve(result)));
+  });
+}
+
+function confirmSignUp(email, code) {
+  return new Promise((resolve, reject) => {
+    new AmazonCognitoIdentity.CognitoUser({ Username: email, Pool: userPool })
+      .confirmRegistration(code, true, (err, result) => (err ? reject(err) : resolve(result)));
+  });
+}
+
+function forgotPassword(email) {
+  return new Promise((resolve, reject) => {
+    new AmazonCognitoIdentity.CognitoUser({ Username: email, Pool: userPool })
+      .forgotPassword({ onSuccess: resolve, onFailure: reject });
+  });
+}
+
+function confirmNewPassword(email, code, newPassword) {
+  return new Promise((resolve, reject) => {
+    new AmazonCognitoIdentity.CognitoUser({ Username: email, Pool: userPool })
+      .confirmPassword(code, newPassword, { onSuccess: resolve, onFailure: reject });
+  });
+}
+
 function logout() {
-  localStorage.removeItem("gai_tokens");
-  window.location.href =
-    `${CONFIG.cognitoDomain}/logout` +
-    `?client_id=${CONFIG.clientId}` +
-    `&logout_uri=${encodeURIComponent(window.location.origin + "/app/")}`;
+  const u = currentCognitoUser();
+  if (u) u.signOut();
+  showAuth();
 }
 
 async function api(path, opts = {}) {
-  const t = tokens();
+  const token = await getAccessToken();
   const res = await fetch(CONFIG.apiUrl + path, {
     ...opts,
     headers: {
       "Content-Type": "application/json",
-      Authorization: "Bearer " + (t && t.access),
+      Authorization: "Bearer " + token,
       ...(opts.headers || {}),
     },
   });
@@ -408,12 +438,32 @@ function setView(view) {
   el("opsToggle").textContent = ops ? "My account" : "Ops console";
 }
 
-/* ---- init ---- */
-async function init() {
-  parseHash();
-  const t = tokens();
-  if (!t) { login(); return; }
-  const claims = decodeJwt(t.id);
+/* ---- auth UI ---- */
+function showAuthForm(name) {
+  ["signinForm", "signupForm", "confirmForm", "forgotForm", "resetForm"].forEach((id) => {
+    el(id).style.display = (id === name) ? "" : "none";
+  });
+  el("authMsg").textContent = "";
+}
+
+function authMsg(msg, isErr) {
+  el("authMsg").textContent = msg;
+  el("authMsg").style.color = isErr ? "#ff7b9c" : "var(--muted)";
+}
+
+function showAuth() {
+  el("authView").style.display = "flex";
+  el("customerView").style.display = "none";
+  el("opsView").style.display = "none";
+  el("opsToggle").style.display = "none";
+  showAuthForm("signinForm");
+}
+
+async function showApp(idToken) {
+  el("authView").style.display = "none";
+  el("customerView").style.display = "";
+  el("opsView").style.display = "none";
+  const claims = decodeJwt(idToken);
   el("whoami").textContent = claims.email || claims["cognito:username"] || "";
   const groups = groupsOf(claims);
   role = groups.includes("admins") ? "admin"
@@ -441,6 +491,18 @@ async function init() {
     setView("customer");
     if (role === "contractor") { showPanel("opsSupport"); }
     await loadOps();
+  }
+}
+
+/* ---- init ---- */
+async function init() {
+  const u = currentCognitoUser();
+  if (!u) { showAuth(); return; }
+  try {
+    const s = await getSession();
+    await showApp(s.getIdToken().getJwtToken());
+  } catch (e) {
+    showAuth();
   }
 }
 
@@ -513,6 +575,92 @@ el("opsNav").addEventListener("click", (e) => {
 el("modalCancel").addEventListener("click", closeCheckout);
 el("modalConfirm").addEventListener("click", completePurchase);
 el("modal").addEventListener("click", (e) => { if (e.target === el("modal")) closeCheckout(); });
+
+/* ---- auth form handlers ---- */
+el("signinForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const email = el("siEmail").value.trim();
+  const pw = el("siPassword").value;
+  if (!email || !pw) return;
+  authMsg("Signing in…");
+  try {
+    await signIn(email, pw);
+    const s = await getSession();
+    await showApp(s.getIdToken().getJwtToken());
+  } catch (err) {
+    authMsg(err.message || "Sign-in failed.", true);
+  }
+});
+
+el("signupForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const email = el("suEmail").value.trim();
+  const pw = el("suPassword").value;
+  if (!email || !pw) return;
+  authMsg("Creating account…");
+  try {
+    await signUp(email, pw);
+    el("cfEmail").value = email;
+    showAuthForm("confirmForm");
+    authMsg("Check your email for a verification code.");
+  } catch (err) {
+    authMsg(err.message || "Sign-up failed.", true);
+  }
+});
+
+el("confirmForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const email = el("cfEmail").value.trim();
+  const code = el("cfCode").value.trim();
+  if (!email || !code) return;
+  authMsg("Verifying…");
+  try {
+    await confirmSignUp(email, code);
+    el("siEmail").value = email;
+    showAuthForm("signinForm");
+    authMsg("Email verified — sign in.");
+  } catch (err) {
+    authMsg(err.message || "Confirmation failed.", true);
+  }
+});
+
+el("forgotForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const email = el("fpEmail").value.trim();
+  if (!email) return;
+  authMsg("Sending code…");
+  try {
+    await forgotPassword(email);
+    el("rsEmail").value = email;
+    showAuthForm("resetForm");
+    authMsg("Check your email for a reset code.");
+  } catch (err) {
+    authMsg(err.message || "Request failed.", true);
+  }
+});
+
+el("resetForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const email = el("rsEmail").value.trim();
+  const code = el("rsCode").value.trim();
+  const pw = el("rsPassword").value;
+  if (!email || !code || !pw) return;
+  authMsg("Setting password…");
+  try {
+    await confirmNewPassword(email, code, pw);
+    el("siEmail").value = email;
+    showAuthForm("signinForm");
+    authMsg("Password reset — sign in.");
+  } catch (err) {
+    authMsg(err.message || "Reset failed.", true);
+  }
+});
+
+el("toSignup").addEventListener("click", (e) => { e.preventDefault(); showAuthForm("signupForm"); });
+el("toForgot").addEventListener("click", (e) => { e.preventDefault(); showAuthForm("forgotForm"); });
+["toSignin2", "toSignin3", "toSignin4", "toSignin5"].forEach((id) =>
+  el(id).addEventListener("click", (e) => { e.preventDefault(); showAuthForm("signinForm"); }));
+
 el("logout").addEventListener("click", logout);
 
 init();

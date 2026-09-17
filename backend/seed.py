@@ -14,6 +14,13 @@ TABLE = os.environ.get("TABLE_PRODUCTS", "genai-products")
 ddb = boto3.resource("dynamodb", region_name=REGION)
 t = ddb.Table(TABLE)
 
+# remove obsolete items no longer in the catalog (keeps the table a true mirror)
+CATALOG_IDS = {p["product_id"] for p in CATALOG}
+for item in t.scan().get("Items", []):
+    if item["product_id"] not in CATALOG_IDS:
+        t.delete_item(Key={"product_id": item["product_id"]})
+        print(f"deleted obsolete {item['product_id']}")
+
 count = 0
 for p in CATALOG:
     item = {

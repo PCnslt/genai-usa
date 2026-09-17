@@ -24,6 +24,53 @@
   </div>
 </header>
 
+<!-- ============ AUTH (custom, branded) ============ -->
+<div id="authView" class="authwrap" style="display:none">
+  <div class="auth-card">
+    <img class="auth-logo" src="/assets/img/logo.png" alt="Generative AI">
+    <form id="signinForm" class="auth-form">
+      <h2>Sign in</h2>
+      <input id="siEmail" type="email" placeholder="Email" autocomplete="username">
+      <input id="siPassword" type="password" placeholder="Password" autocomplete="current-password">
+      <button class="btn" type="submit">Sign in</button>
+      <div class="auth-links">
+        <a id="toSignup" href="#">Create account</a>
+        <a id="toForgot" href="#">Forgot password?</a>
+      </div>
+    </form>
+    <form id="signupForm" class="auth-form" style="display:none">
+      <h2>Create account</h2>
+      <input id="suEmail" type="email" placeholder="Email" autocomplete="username">
+      <input id="suPassword" type="password" placeholder="Password" autocomplete="new-password">
+      <button class="btn" type="submit">Sign up</button>
+      <div class="auth-links"><a id="toSignin2" href="#">Back to sign in</a></div>
+    </form>
+    <form id="confirmForm" class="auth-form" style="display:none">
+      <h2>Verify your email</h2>
+      <p class="muted small">We emailed a verification code.</p>
+      <input id="cfEmail" type="email" placeholder="Email">
+      <input id="cfCode" type="text" placeholder="Verification code">
+      <button class="btn" type="submit">Confirm</button>
+      <div class="auth-links"><a id="toSignin3" href="#">Back to sign in</a></div>
+    </form>
+    <form id="forgotForm" class="auth-form" style="display:none">
+      <h2>Reset password</h2>
+      <input id="fpEmail" type="email" placeholder="Email">
+      <button class="btn" type="submit">Send code</button>
+      <div class="auth-links"><a id="toSignin4" href="#">Back to sign in</a></div>
+    </form>
+    <form id="resetForm" class="auth-form" style="display:none">
+      <h2>New password</h2>
+      <input id="rsEmail" type="email" placeholder="Email">
+      <input id="rsCode" type="text" placeholder="Code from email">
+      <input id="rsPassword" type="password" placeholder="New password">
+      <button class="btn" type="submit">Set password</button>
+      <div class="auth-links"><a id="toSignin5" href="#">Back to sign in</a></div>
+    </form>
+    <div id="authMsg" class="muted small" style="margin-top:12px"></div>
+  </div>
+</div>
+
 <!-- ============ CUSTOMER VIEW ============ -->
 <div id="customerView" class="layout">
   <aside class="sidebar">
@@ -162,6 +209,7 @@
   </div>
 </div>
 
+<script src="vendor/amazon-cognito-identity.min.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
