@@ -136,6 +136,7 @@ footer { border-top: 1px solid var(--line); padding: 40px 32px; display: flex; j
 .plan ul { list-style: none; margin-bottom: 30px; flex: 1; }
 .plan li { color: var(--muted); font-size: 14px; font-weight: 300; padding: 7px 0 7px 18px; position: relative; line-height: 1.5; }
 .plan li::before { content: ""; position: absolute; left: 0; top: 14px; width: 6px; height: 6px; border-radius: 50%; background: var(--grad); }
+.plan .guarantee { margin: -6px 0 22px; font-size: 13px; font-weight: 400; letter-spacing: .01em; color: #c7b6ff; }
 .plan .btn { text-align: center; }
 
 .reveal { opacity: 0; transform: translateY(34px); transition: opacity 1s var(--ease), transform 1s var(--ease); }
