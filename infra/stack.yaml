@@ -106,14 +106,14 @@ Resources:
   SupportTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: genai-support
+      TableName: genai-conversations
       BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
-        - { AttributeName: message_id, AttributeType: S }
+        - { AttributeName: conversation_id, AttributeType: S }
         - { AttributeName: customer_id, AttributeType: S }
         - { AttributeName: status, AttributeType: S }
       KeySchema:
-        - { AttributeName: message_id, KeyType: HASH }
+        - { AttributeName: conversation_id, KeyType: HASH }
       GlobalSecondaryIndexes:
         - IndexName: customer-index
           KeySchema: [{ AttributeName: customer_id, KeyType: HASH }]
@@ -176,6 +176,9 @@ Resources:
   AdminsGroup:
     Type: AWS::Cognito::UserPoolGroup
     Properties: { GroupName: admins, UserPoolId: !Ref UserPool }
+  ContractorsGroup:
+    Type: AWS::Cognito::UserPoolGroup
+    Properties: { GroupName: contractors, UserPoolId: !Ref UserPool }
 
   # ============ IAM ============
   LambdaRole:
@@ -237,7 +240,7 @@ Resources:
           TABLE_CONTRACTS: genai-contracts
           TABLE_BILLING: genai-billing
           TABLE_CHAT: genai-chat
-          TABLE_SUPPORT: genai-support
+          TABLE_SUPPORT: genai-conversations
           TABLE_META: genai-meta
 
   # ============ API Gateway (HTTP API) ============
@@ -295,6 +298,15 @@ Resources:
     Properties:
       ApiId: !Ref HttpApi
       RouteKey: POST /webhooks/payments
+      Target: !Sub 'integrations/${Integration}'
+      AuthorizationType: NONE
+
+  # Public sales chatbot on the marketing site (no auth, CORS-enabled).
+  PublicChatRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: POST /chat-public
       Target: !Sub 'integrations/${Integration}'
       AuthorizationType: NONE
 

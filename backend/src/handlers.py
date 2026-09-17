@@ -43,6 +43,8 @@ from typing import Optional
 
 import auth
 import db
+import identity
+import marketing
 import terms
 from payments import get_provider, Order
 from products import CATALOG, by_id as catalog_by_id
@@ -99,6 +101,12 @@ def _require_admin(event):
 def _require_employee(event):
     if not auth.is_employee(event):
         raise PermissionError("employees only")
+
+
+def _require_staff(event):
+    """Account managers (contractors) OR internal employees/admins."""
+    if not auth.is_staff(event):
+        raise PermissionError("staff only")
 
 
 # ---- active contract (runtime override in genai-meta) ----
@@ -227,17 +235,22 @@ def chat(event):
     return _ok({"answer": answer, "context_owned": [e["product_id"] for e in ents]})
 
 
-def _build_context(cid: str, ents: list) -> str:
-    owned = [e["product_id"] for e in ents] or []
-    owned_names = [catalog_by_id().get(p, {}).get("name", p) for p in owned]
+def _catalog_summary() -> str:
     catalog = db.list_products() or CATALOG
-    lines = [f"Customer owns: {', '.join(owned_names) if owned_names else 'nothing yet'}"]
-    lines.append("Available products/services (id — name — price):")
+    lines = ["Available products/services (id — name — price):"]
     for p in catalog:
         price = int(p.get("price_cents", 0)) / 100
         monthly = int(p.get("monthly_cents", 0)) / 100
         price_s = f"${price:,.0f}" + (f" + ${monthly:,.0f}/mo" if monthly else "")
         lines.append(f"- {p['product_id']} — {p['name']} — {price_s}")
+    return "\n".join(lines)
+
+
+def _build_context(cid: str, ents: list) -> str:
+    owned = [e["product_id"] for e in ents] or []
+    owned_names = [catalog_by_id().get(p, {}).get("name", p) for p in owned]
+    lines = [f"Customer owns: {', '.join(owned_names) if owned_names else 'nothing yet'}"]
+    lines.append(_catalog_summary())
     return "\n".join(lines)
 
 
@@ -295,19 +308,130 @@ def _fallback(ctx: str, msg: str) -> str:
     return "I can help with our services, plans, and your purchases. Try asking about pricing, chatbots, voice agents, or what you've bought."
 
 
-# ---- support (customer) ----
+# ---- public website sales bot (no auth) ----
+def chat_public(event):
+    b = _body(event)
+    msg = b.get("message", "")
+    if not msg:
+        return _err("message required")
+    return _ok({"answer": _public_answer(msg)})
+
+
+def _public_answer(msg: str) -> str:
+    model = os.environ.get("BEDROCK_MODEL_ID")
+    ctx = marketing.context() + "\n\nCatalog:\n" + _catalog_summary()
+    if model:
+        try:
+            import boto3
+            br = boto3.client("bedrock-runtime",
+                              region_name=os.environ.get("AWS_REGION", "us-east-2"))
+            body = {
+                "anthropic_version": "bedrock-2023-05-31",
+                "max_tokens": 600,
+                "system": ("You are the sales assistant on genai-usa.com. You know every "
+                           "product, service, and plan. Be warm, concise, and persuasive: "
+                           "answer the visitor's question, then gently steer toward a plan "
+                           "or the contact page. Use only the facts provided — never invent "
+                           "prices, guarantees, or timelines."),
+                "messages": [{"role": "user", "content": f"Context:\n{ctx}\n\nVisitor: {msg}"}],
+            }
+            r = br.invoke_model(modelId=model, body=json.dumps(body))
+            return json.loads(r["body"].read())["content"][0]["text"]
+        except Exception as e:
+            return _public_fallback(msg) + f"\n\n_(assistant offline: {e})_"
+    return _public_fallback(msg)
+
+
+def _public_fallback(msg: str) -> str:
+    m = msg.lower()
+    cat = catalog_by_id()
+    best = None
+    for pid, p in cat.items():
+        words = [w for w in re.split(r"[^a-z0-9]+", p["name"].lower()) if len(w) >= 4]
+        if not words:
+            continue
+        hits = sum(1 for w in words if w in m)
+        if hits and (best is None or hits > best[0]):
+            best = (hits, p)
+    if best:
+        p = best[1]
+        price = int(p["price_cents"]) / 100
+        monthly = int(p.get("monthly_cents", 0)) / 100
+        price_s = f"${price:,.0f}" + (f" + ${monthly:,.0f}/mo" if monthly else "")
+        return f"{p['name']} — {p['description']} Price: {price_s}. {marketing.CTA}"
+    if any(k in m for k in ("price", "cost", "much", "plan", "pricing", "retainer")):
+        return f"{marketing.PLANS_SUMMARY} {marketing.CTA}"
+    if any(k in m for k in ("how", "work", "process", "step", "timeline")):
+        return ("Here's how it works:\n" + "\n".join("- " + s for s in marketing.HOW_IT_WORKS)
+                + f"\n\n{marketing.CTA}")
+    if any(k in m for k in ("why", "guarantee", "refund", "risk", "warrant", "compare")):
+        return ("Why us:\n" + "\n".join("- " + s for s in marketing.VALUE_PROPS)
+                + "\n\nGuarantees:\n" + "\n".join("- " + s for s in marketing.GUARANTEES)
+                + f"\n\n{marketing.CTA}")
+    if any(k in m for k in ("what", "service", "offer", "do you", "sell", "help")):
+        return f"{marketing.SERVICES_SUMMARY}\n\n{marketing.PLANS_SUMMARY}\n\n{marketing.CTA}"
+    if any(k in m for k in ("hi", "hello", "hey", "yo")):
+        return f"Hi! {marketing.PITCH} {marketing.CTA}"
+    return f"{marketing.PITCH}\n\n{marketing.PLANS_SUMMARY}\n\n{marketing.CTA}"
+
+
+# ---- support / relay (customer) ----
 def open_support(event):
     b = _body(event)
     body = (b.get("message") or "").strip()
     if not body:
         return _err("message required")
-    mid = db.send_support(auth.customer_id(event), auth.email(event),
-                          b.get("subject", "Support request"), body)
-    return _ok({"message_id": mid, "status": "open"})
+    cid = db.start_or_append_support(
+        auth.customer_id(event), b.get("subject", "Support request"), body,
+        identity.customer_alias(auth.customer_id(event)))
+    return _ok({"conversation_id": cid, "status": "open"})
 
 
 def my_support(event):
-    return _ok(db.list_support_customer(auth.customer_id(event)))
+    convos = db.list_support_customer(auth.customer_id(event))
+    return _ok([_customer_view(c) for c in convos])
+
+
+def _manager_label(c: dict) -> str:
+    mn = c.get("manager_name")
+    return (mn + " · Account Manager") if mn else "Account Manager"
+
+
+def _customer_view(c: dict) -> dict:
+    """What the customer sees — never a contractor's real identity."""
+    label = _manager_label(c)
+    return {
+        "conversation_id": c["conversation_id"],
+        "subject": c.get("subject", "Support"),
+        "status": c.get("status", "open"),
+        "manager": label,
+        "updated_at": c.get("updated_at"),
+        "messages": [
+            {"sender": m["sender"],
+             "alias": "You" if m["sender"] == "customer" else label,
+             "body": m["body"], "ts": m["ts"]}
+            for m in c.get("messages", [])
+        ],
+    }
+
+
+def _staff_view(c: dict) -> dict:
+    """What the contractor/employee sees — never a customer's real identity."""
+    alias = c.get("customer_alias", "Client")
+    return {
+        "conversation_id": c["conversation_id"],
+        "customer_alias": alias,
+        "subject": c.get("subject", "Support"),
+        "status": c.get("status", "open"),
+        "manager_name": c.get("manager_name") or "",
+        "updated_at": c.get("updated_at"),
+        "messages": [
+            {"sender": m["sender"],
+             "alias": alias if m["sender"] == "customer" else "You",
+             "body": m["body"], "ts": m["ts"]}
+            for m in c.get("messages", [])
+        ],
+    }
 
 
 # ---- ops: employee + admin ----
@@ -331,17 +455,24 @@ def ops_contracts(event):
 
 
 def ops_support(event):
-    _require_employee(event)
-    return _ok(db.list_open_support())
+    _require_staff(event)
+    return _ok([_staff_view(c) for c in db.list_open_support()])
 
 
 def ops_reply(event, params):
-    _require_employee(event)
+    _require_staff(event)
     reply = (_body(event).get("reply") or "").strip()
     if not reply:
         return _err("reply required")
-    db.reply_support(params["id"], reply)
-    return _ok({"message_id": params["id"], "status": "resolved"})
+    mid = auth.customer_id(event)
+    db.append_manager_reply(params["id"], reply, mid, identity.manager_name(mid))
+    return _ok({"conversation_id": params["id"], "status": "open"})
+
+
+def ops_resolve(event, params):
+    _require_staff(event)
+    db.resolve_support(params["id"])
+    return _ok({"conversation_id": params["id"], "status": "resolved"})
 
 
 # ---- ops: admin only ----
@@ -396,8 +527,8 @@ def ops_set_role(event, params):
     b = _body(event)
     group = b.get("group")
     action = b.get("action", "add")  # add | remove
-    if group not in ("customers", "employees", "admins"):
-        return _err("group must be customers|employees|admins")
+    if group not in ("customers", "employees", "contractors", "admins"):
+        return _err("group must be customers|employees|contractors|admins")
     import boto3
     cidp = boto3.client("cognito-idp")
     pool = os.environ.get("USER_POOL_ID")
@@ -460,6 +591,7 @@ _ROUTES = [
     (("GET", "/contracts"), list_contracts),
     (("POST", "/contracts/accept"), accept_contract),
     (("POST", "/chat"), chat),
+    (("POST", "/chat-public"), chat_public),
     (("POST", "/support"), open_support),
     (("GET", "/support"), my_support),
     (("POST", "/webhooks/payments"), payment_event),
@@ -469,6 +601,7 @@ _ROUTES = [
     (("GET", "/ops/contracts"), ops_contracts),
     (("GET", "/ops/support"), ops_support),
     (("POST", "/ops/support/{id}/reply"), ops_reply),
+    (("POST", "/ops/support/{id}/resolve"), ops_resolve),
 
     (("POST", "/ops/products"), ops_upsert_product),
     (("DELETE", "/ops/products/{id}"), ops_delete_product),

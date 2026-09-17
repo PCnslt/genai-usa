@@ -15,7 +15,7 @@ _TABLES = {
     "contracts": os.environ.get("TABLE_CONTRACTS", "genai-contracts"),
     "billing": os.environ.get("TABLE_BILLING", "genai-billing"),
     "chat": os.environ.get("TABLE_CHAT", "genai-chat"),
-    "support": os.environ.get("TABLE_SUPPORT", "genai-support"),
+    "support": os.environ.get("TABLE_SUPPORT", "genai-conversations"),
     "meta": os.environ.get("TABLE_META", "genai-meta"),
 }
 
@@ -202,15 +202,44 @@ def finance_summary() -> dict:
     }
 
 
-# ---- support (customer -> ops messaging) ----
-def send_support(customer_id: str, email: str, subject: str, body: str) -> str:
-    mid = new_id("sup")
+# ---- conversations (anonymized customer <-> contractor relay) ----
+# One item per thread; `messages` is an append-only list. Identity is stripped
+# at the API boundary so the contractor never sees the customer's real id and
+# the customer never sees the contractor's real id.
+def start_or_append_support(customer_id: str, subject: str, body: str,
+                            customer_alias: str) -> str:
+    ts = now()
+    r = table("support").query(
+        IndexName="customer-index",
+        KeyConditionExpression="customer_id = :c",
+        FilterExpression="#s = :s",
+        ExpressionAttributeNames={"#s": "status"},
+        ExpressionAttributeValues={":c": customer_id, ":s": "open"},
+    )
+    items = r.get("Items", [])
+    msg = {"sender": "customer", "body": body, "ts": ts}
+    if items:  # append to the open thread
+        cid = items[0]["conversation_id"]
+        table("support").update_item(
+            Key={"conversation_id": cid},
+            UpdateExpression="SET messages = list_append(if_not_exists(messages, :e), :m), updated_at = :t",
+            ExpressionAttributeValues={":m": [msg], ":e": [], ":t": ts},
+        )
+        return cid
+    cid = new_id("con")
     table("support").put_item(Item={
-        "message_id": mid, "customer_id": customer_id, "email": email,
-        "subject": subject, "body": body, "status": "open",
-        "reply": "", "created_at": now(),
+        "conversation_id": cid,
+        "customer_id": customer_id,
+        "customer_alias": customer_alias,
+        "subject": subject,
+        "status": "open",
+        "messages": [msg],
+        "manager_id": "",
+        "manager_name": "",
+        "created_at": ts,
+        "updated_at": ts,
     })
-    return mid
+    return cid
 
 
 def list_support_customer(customer_id: str) -> list[dict]:
@@ -220,7 +249,7 @@ def list_support_customer(customer_id: str) -> list[dict]:
         ExpressionAttributeValues={":c": customer_id},
     )
     items = r.get("Items", [])
-    items.sort(key=lambda m: m.get("created_at", 0), reverse=True)
+    items.sort(key=lambda c: c.get("updated_at", 0), reverse=True)
     return items
 
 
@@ -232,16 +261,31 @@ def list_open_support() -> list[dict]:
         ExpressionAttributeValues={":s": "open"},
     )
     items = r.get("Items", [])
-    items.sort(key=lambda m: m.get("created_at", 0))
+    items.sort(key=lambda c: c.get("updated_at", 0))
     return items
 
 
-def reply_support(message_id: str, reply: str) -> None:
+def append_manager_reply(conversation_id: str, reply: str,
+                         manager_id: str, manager_name: str) -> None:
+    ts = now()
+    msg = {"sender": "manager", "body": reply, "ts": ts}
     table("support").update_item(
-        Key={"message_id": message_id},
-        UpdateExpression="SET reply = :r, #s = :s, resolved_at = :t",
+        Key={"conversation_id": conversation_id},
+        UpdateExpression=("SET messages = list_append(if_not_exists(messages, :e), :m), "
+                          "manager_id = :mid, manager_name = :mn, updated_at = :t"),
+        ExpressionAttributeValues={
+            ":m": [msg], ":e": [], ":mid": manager_id,
+            ":mn": manager_name, ":t": ts,
+        },
+    )
+
+
+def resolve_support(conversation_id: str) -> None:
+    table("support").update_item(
+        Key={"conversation_id": conversation_id},
+        UpdateExpression="SET #s = :s, resolved_at = :t",
         ExpressionAttributeNames={"#s": "status"},
-        ExpressionAttributeValues={":r": reply, ":s": "resolved", ":t": now()},
+        ExpressionAttributeValues={":s": "resolved", ":t": now()},
     )
 
 

@@ -69,8 +69,14 @@ a { color: inherit; text-decoration: none; }
 .thread { display: flex; flex-direction: column; gap: 10px; }
 .sup { border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
 .sup.resolved { opacity: .6; }
-.sup-head { display: flex; justify-content: space-between; margin-bottom: 4px; }
+.sup-head { display: flex; justify-content: space-between; margin-bottom: 6px; }
 .sup-reply { background: rgba(79,124,255,.12); border-left: 2px solid var(--blue); padding: 8px 10px; margin-top: 8px; border-radius: 0 8px 8px 0; }
+.sup-msg { margin: 6px 0; padding: 8px 10px; border-radius: 8px; }
+.sup-msg.customer { background: rgba(255,255,255,.03); border: 1px solid var(--line); }
+.sup-msg.manager { background: rgba(79,124,255,.1); border: 1px solid rgba(79,124,255,.3); }
+.sup-alias { display: block; font-size: 11px; font-weight: 500; color: var(--muted); margin-bottom: 2px; }
+.ops-msgs { margin-top: 6px; display: flex; flex-direction: column; gap: 2px; }
+.ops-actions { display: flex; gap: 6px; }
 
 /* ops nav */
 .opsnav { list-style: none; }

@@ -243,13 +243,16 @@ async function refreshSupport() {
   const thread = await api("/support");
   const box = el("supportThread");
   box.innerHTML = "";
-  (thread || []).forEach((m) => {
+  (thread || []).forEach((c) => {
     const d = document.createElement("div");
-    d.className = "sup " + m.status;
+    d.className = "sup " + c.status;
+    const msgs = (c.messages || []).map((m) =>
+      `<div class="sup-msg ${m.sender}"><span class="sup-alias">${esc(m.alias)}</span><p>${esc(m.body)}</p></div>`
+    ).join("");
     d.innerHTML =
-      `<div class="sup-head"><b>${esc(m.subject || "Support request")}</b> <span class="status">${esc(m.status)}</span></div>` +
-      `<p class="muted small">${esc(m.body)}</p>` +
-      (m.reply ? `<p class="sup-reply">→ ${esc(m.reply)}</p>` : `<p class="muted small">Awaiting reply…</p>`);
+      `<div class="sup-head"><b>${esc(c.subject || "Support")}</b> <span class="status">${esc(c.status)}</span></div>` +
+      msgs +
+      (c.status === "open" ? `<p class="muted small">${esc(c.manager)} will reply here.</p>` : "");
     box.appendChild(d);
   });
 }
@@ -288,20 +291,28 @@ function renderOpsOrders(list) {
 function renderOpsSupport(list) {
   const box = el("opsSupportList");
   box.innerHTML = "";
-  if (!list || !list.length) { box.innerHTML = '<p class="muted">No open messages.</p>'; return; }
-  list.forEach((m) => {
+  if (!list || !list.length) { box.innerHTML = '<p class="muted">No open conversations.</p>'; return; }
+  list.forEach((c) => {
     const d = document.createElement("div");
     d.className = "ops-row";
+    const msgs = (c.messages || []).slice(-3).map((m) =>
+      `<div class="muted small"><b>${esc(m.alias)}</b>: ${esc(m.body)}</div>`
+    ).join("");
     d.innerHTML =
-      `<div class="ops-main"><b>${esc(m.subject || "Support request")}</b><span class="muted small">${esc(m.email)} · ${esc(m.customer_id)}</span><p class="muted small">${esc(m.body)}</p></div>` +
-      `<div class="ops-side"><textarea class="reply" placeholder="Reply…"></textarea><button class="btn small" data-mid="${esc(m.message_id)}">Reply</button></div>`;
+      `<div class="ops-main"><b>${esc(c.customer_alias)}</b><span class="muted small">${esc(c.subject || "Support")}${c.manager_name ? " · " + esc(c.manager_name) : " · unassigned"}</span><div class="ops-msgs">${msgs}</div></div>` +
+      `<div class="ops-side"><textarea class="reply" placeholder="Reply…"></textarea><div class="ops-actions"><button class="btn small" data-mid="${esc(c.conversation_id)}">Reply</button><button class="btn ghost small" data-res="${esc(c.conversation_id)}">Resolve</button></div></div>`;
     box.appendChild(d);
   });
   box.querySelectorAll("[data-mid]").forEach((b) =>
     b.addEventListener("click", async () => {
-      const ta = b.parentElement.querySelector(".reply");
+      const ta = b.closest(".ops-row").querySelector(".reply");
       if (!ta.value.trim()) { alert("Type a reply."); return; }
       await api(`/ops/support/${b.dataset.mid}/reply`, { method: "POST", body: JSON.stringify({ reply: ta.value }) });
+      loadOps();
+    }));
+  box.querySelectorAll("[data-res]").forEach((b) =>
+    b.addEventListener("click", async () => {
+      await api(`/ops/support/${b.dataset.res}/resolve`, { method: "POST" });
       loadOps();
     }));
 }
@@ -371,6 +382,11 @@ function renderOpsFinance(f) {
 }
 
 async function loadOps() {
+  if (role === "contractor") {
+    const support = await api("/ops/support");
+    renderOpsSupport(support);
+    return;
+  }
   const [orders, support, contracts, products, users, finance] = await Promise.all([
     api("/ops/orders"), api("/ops/support"), api("/ops/contracts"),
     api("/products"), api("/ops/users"), api("/ops/finance"),
@@ -399,12 +415,16 @@ async function init() {
   const claims = decodeJwt(t.id);
   el("whoami").textContent = claims.email || claims["cognito:username"] || "";
   const groups = groupsOf(claims);
-  role = groups.includes("admins") ? "admin" : groups.includes("employees") ? "employee" : "customer";
+  role = groups.includes("admins") ? "admin"
+       : groups.includes("employees") ? "employee"
+       : groups.includes("contractors") ? "contractor"
+       : "customer";
   el("roleBadge").textContent = role;
 
-  const isOps = role === "admin" || role === "employee";
+  const isOps = role === "admin" || role === "employee" || role === "contractor";
   el("opsToggle").style.display = isOps ? "" : "none";
   document.querySelectorAll(".adminOnly").forEach((n) => (n.style.display = role === "admin" ? "" : "none"));
+  document.querySelectorAll(".employeeOnly").forEach((n) => (n.style.display = (role === "admin" || role === "employee") ? "" : "none"));
 
   // catalog (shared)
   const prod = await api("/products");
@@ -418,6 +438,7 @@ async function init() {
 
   if (isOps) {
     setView("customer");
+    if (role === "contractor") { showPanel("opsSupport"); }
     await loadOps();
   }
 }

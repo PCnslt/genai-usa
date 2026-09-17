@@ -2,7 +2,7 @@
 
 API Gateway (HTTP API) with a Cognito JWT authorizer passes the validated
 token in `event.requestContext.authorizer.jwt.claims`. Roles come from the
-`cognito:groups` claim (customers / employees / admins).
+`cognito:groups` claim (customers / employees / contractors / admins).
 
 Note: the HTTP API authorizer serializes the `cognito:groups` array as a string
 like "[customers admins]", so `roles()` normalizes both list and string forms.
@@ -47,6 +47,15 @@ def is_admin(event: dict) -> bool:
 
 def is_employee(event: dict) -> bool:
     return "employees" in roles(event) or is_admin(event)
+
+
+def is_contractor(event: dict) -> bool:
+    return "contractors" in roles(event)
+
+
+def is_staff(event: dict) -> bool:
+    """Account managers / engineers (contractors) OR internal employees/admins."""
+    return is_employee(event) or is_contractor(event)
 
 
 def is_customer(event: dict) -> bool:
