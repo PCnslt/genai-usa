@@ -110,6 +110,17 @@ nav { position: fixed; top: 0; left: 0; right: 0; z-index: 60; background: linea
 /* ---- footer ---- */
 footer { border-top: 1px solid var(--line); padding: 40px 32px; display: flex; justify-content: space-between; align-items: center; gap: 16px; color: var(--muted); font-size: 12px; letter-spacing: .04em; flex-wrap: wrap; }
 
+/* ---- products ---- */
+.products { padding: 40px 0 120px; }
+.product-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 26px; margin-top: 40px; }
+.product { border: 1px solid var(--line); border-radius: 16px; padding: 30px; background: rgba(155,92,255,.05); transition: border-color .25s var(--ease), transform .25s var(--ease); }
+.product:hover { border-color: rgba(155,92,255,.5); transform: translateY(-3px); }
+.product .ptag { font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); margin-bottom: 16px; }
+.product h3 { font-size: 20px; font-weight: 400; letter-spacing: -0.01em; margin-bottom: 10px; }
+.product p { color: var(--muted); font-size: 14px; font-weight: 300; line-height: 1.6; }
+.product .price { margin-top: 20px; font-size: 14px; letter-spacing: .03em; color: var(--ink); }
+.products .note { text-align: center; color: var(--muted); font-size: 14px; font-weight: 300; margin-top: 54px; }
+
 .reveal { opacity: 0; transform: translateY(34px); transition: opacity 1s var(--ease), transform 1s var(--ease); }
 .reveal.in { opacity: 1; transform: none; }
 
