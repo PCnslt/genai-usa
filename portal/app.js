@@ -440,7 +440,7 @@ function setView(view) {
 
 /* ---- auth UI ---- */
 function showAuthForm(name) {
-  ["signinForm", "signupForm", "confirmForm", "forgotForm", "resetForm"].forEach((id) => {
+  ["signinForm", "confirmForm", "forgotForm", "resetForm"].forEach((id) => {
     el(id).style.display = (id === name) ? "" : "none";
   });
   el("authMsg").textContent = "";
@@ -496,6 +496,8 @@ async function showApp(idToken) {
 
 /* ---- init ---- */
 async function init() {
+  const qp = new URLSearchParams(location.search);
+  if (qp.get("email")) el("siEmail").value = qp.get("email");
   const u = currentCognitoUser();
   if (!u) { showAuth(); return; }
   try {
@@ -592,22 +594,6 @@ el("signinForm").addEventListener("submit", async (e) => {
   }
 });
 
-el("signupForm").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const email = el("suEmail").value.trim();
-  const pw = el("suPassword").value;
-  if (!email || !pw) return;
-  authMsg("Creating account…");
-  try {
-    await signUp(email, pw);
-    el("cfEmail").value = email;
-    showAuthForm("confirmForm");
-    authMsg("Check your email for a verification code.");
-  } catch (err) {
-    authMsg(err.message || "Sign-up failed.", true);
-  }
-});
-
 el("confirmForm").addEventListener("submit", async (e) => {
   e.preventDefault();
   const email = el("cfEmail").value.trim();
@@ -656,9 +642,8 @@ el("resetForm").addEventListener("submit", async (e) => {
   }
 });
 
-el("toSignup").addEventListener("click", (e) => { e.preventDefault(); showAuthForm("signupForm"); });
 el("toForgot").addEventListener("click", (e) => { e.preventDefault(); showAuthForm("forgotForm"); });
-["toSignin2", "toSignin3", "toSignin4", "toSignin5"].forEach((id) =>
+["toSignin3", "toSignin4", "toSignin5"].forEach((id) =>
   el(id).addEventListener("click", (e) => { e.preventDefault(); showAuthForm("signinForm"); }));
 
 el("logout").addEventListener("click", logout);

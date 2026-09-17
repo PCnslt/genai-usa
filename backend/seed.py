@@ -28,6 +28,7 @@ for p in CATALOG:
         "name": p["name"],
         "price_cents": p["price_cents"],
         "kind": p["kind"],
+        "category": p.get("category", ""),
         "description": p.get("description", ""),
         "recurring": bool(p.get("recurring")),
         "monthly_cents": int(p.get("monthly_cents", 0)),

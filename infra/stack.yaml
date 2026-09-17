@@ -139,6 +139,25 @@ Resources:
       UserPoolName: genai-users
       UsernameAttributes: [email]
       AutoVerifiedAttributes: [email]
+      Schema:
+        - Name: custom:company
+          AttributeDataType: String
+          Mutable: true
+        - Name: custom:role
+          AttributeDataType: String
+          Mutable: true
+        - Name: custom:needs
+          AttributeDataType: String
+          Mutable: true
+        - Name: company
+          AttributeDataType: String
+          Mutable: true
+        - Name: role
+          AttributeDataType: String
+          Mutable: true
+        - Name: needs
+          AttributeDataType: String
+          Mutable: true
 
   UserPoolDomain:
     Type: AWS::Cognito::UserPoolDomain
@@ -311,6 +330,24 @@ Resources:
     Properties:
       ApiId: !Ref HttpApi
       RouteKey: POST /chat-public
+      Target: !Sub 'integrations/${Integration}'
+      AuthorizationType: NONE
+
+  # Public catalog (no auth) — the checkout page and marketing site read this.
+  CatalogRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: GET /catalog
+      Target: !Sub 'integrations/${Integration}'
+      AuthorizationType: NONE
+
+  # Public guest checkout (no auth) — creates the account + order + entitlement.
+  CheckoutRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: POST /checkout
       Target: !Sub 'integrations/${Integration}'
       AuthorizationType: NONE
 

@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Checkout — Generative Artificial Intelligence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="grain"></div>
+<div id="glow"></div>
+
+<header class="topbar">
+  <div class="brand">Generative <span>AI</span></div>
+  <a href="/" class="btn ghost">← Back to site</a>
+</header>
+
+<div class="co-wrap">
+
+  <!-- ============ product detail ============ -->
+  <section class="co-product card">
+    <div id="coTag" class="ptag">…</div>
+    <h1 id="coName">Loading…</h1>
+    <p id="coDesc" class="muted">…</p>
+    <div class="co-price" id="coPrice">…</div>
+    <div class="co-note muted small">What you're buying is delivered by our vetted expert network. After checkout you'll have a private portal to track delivery, message your account manager, and manage your plan.</div>
+  </section>
+
+  <!-- ============ account + payment ============ -->
+  <section class="co-form card" id="coFormCard">
+    <h2>Complete your order</h2>
+    <p class="muted small">Create your account — you'll sign in with these details to access your portal.</p>
+    <form id="checkoutForm" class="co-form-body">
+      <div class="co-grid">
+        <input id="coName" placeholder="Full name" autocomplete="name">
+        <input id="coCompany" placeholder="Company (optional)" autocomplete="organization">
+        <input id="coPhone" placeholder="Phone" autocomplete="tel">
+        <input id="coRole" placeholder="Your role (optional)" autocomplete="off">
+      </div>
+      <input id="coEmail" type="email" placeholder="Work email" autocomplete="username">
+      <input id="coPassword" type="password" placeholder="Create a password (8+ characters)" autocomplete="new-password">
+      <textarea id="coNeeds" placeholder="What are you looking to automate? (optional)"></textarea>
+
+      <div class="co-pay">
+        <div class="co-pay-head">Payment</div>
+        <input id="coCard" placeholder="Card number" inputmode="numeric" autocomplete="cc-number">
+        <div class="co-grid2">
+          <input id="coExp" placeholder="MM / YY" inputmode="numeric" autocomplete="cc-exp">
+          <input id="coCvc" placeholder="CVC" inputmode="numeric" autocomplete="cc-csc">
+        </div>
+        <div class="muted small">🔒 Securely processed — your card is never stored on our servers.</div>
+      </div>
+
+      <label class="agree"><input type="checkbox" id="coAgree"> I agree to the <b>Terms of Service &amp; Service Agreement</b></label>
+      <button class="btn co-submit" id="coSubmit" type="submit">Pay <span id="coPayAmount">…</span></button>
+      <div id="coError" class="co-error"></div>
+      <div class="muted small" style="text-align:center">Demo checkout — no real charge is made.</div>
+    </form>
+  </section>
+
+  <!-- ============ success ============ -->
+  <section class="co-success card" id="coSuccess" style="display:none">
+    <h2>✓ You're all set</h2>
+    <p id="coSuccessMsg" class="muted"></p>
+    <a id="coSignin" class="btn" href="/app/">Sign in to your new account</a>
+    <a href="/" class="btn ghost">Back to site</a>
+  </section>
+
+</div>
+
+<script src="checkout.js"></script>
+</body>
+</html>

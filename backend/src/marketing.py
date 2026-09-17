@@ -3,20 +3,23 @@
 This is the "knowledge base" the sales bot is grounded in (in addition to the
 live product catalog). Used both as system-prompt context (Bedrock) and as the
 source for the rule-based fallback when Bedrock isn't configured.
+
+Positioning rule: we NEVER say who we cater to. Services are organized purely
+by AI service category. No industry verticals.
 """
 from __future__ import annotations
 
 PITCH = (
     "Generative Artificial Intelligence (genai-usa.com) is a productized AI "
-    "agency for real estate agents and home-service businesses (plumbers, "
-    "electricians, HVAC, landscapers, roofers, cleaners). We build and run the "
-    "AI systems that capture leads, answer missed calls, fill the schedule, and "
-    "manage reviews — delivered by a vetted expert network on fixed scope and "
-    "fixed price, with a human on every plan. Outcomes, not hourly billing."
+    "agency. We build and run the AI systems that answer calls, capture leads, "
+    "generate content, and automate operations — organized purely by what the "
+    "system does, never by who the customer is. Delivery is fixed scope and "
+    "fixed price through a vetted expert network, with a human on every plan. "
+    "Outcomes, not hourly billing."
 )
 
 HOW_IT_WORKS = [
-    "Pick a service or plan — fixed scope, fixed price, no hourly billing.",
+    "Pick a service, product, or plan — fixed scope, fixed price, no hourly billing.",
     "We scope it with you and assign a vetted specialist.",
     "We build, QA, and deliver — most systems go live in 48 hours to 2 weeks.",
     "We run and maintain it monthly; a human is always on the line.",
@@ -37,13 +40,18 @@ GUARANTEES = [
 ]
 
 SERVICES_SUMMARY = (
-    "Real estate agents: Missed-Call AI Receptionist, Lead-Qualifier Chatbot, "
-    "Lead Follow-Up Automation, CRM Setup (Follow Up Boss/kvCORE), Listing "
-    "Marketing Pack, Virtual Staging + Photo Editing, Local SEO + Google "
-    "Business, Website + IDX. Home services: Missed-Call AI Receptionist, "
-    "Online Booking & Scheduling, Estimate Follow-Up Automation, Google "
-    "Business Profile + Reviews, Local SEO + GEO, Website + Online Booking, "
-    "Before/After Content, Facebook/Google Ads + Lead Gen."
+    "Conversational AI: Custom AI Chatbot, AI Voice Receptionist, AI Support "
+    "Agent, Outbound AI Calling. Content & Creative AI: AI Content Engine, AI "
+    "Social Media Engine, AI Video & Avatar Production, AI Branding & Creative. "
+    "Sales & Growth AI: AI Lead Generation System, AI Sales Assistant (SDR), AI "
+    "Follow-Up & Nurture, AI CRM & Pipeline Automation. Marketing & Visibility "
+    "AI: AI SEO Content Pipeline, AI Ads & Creative Optimization, AI Review & "
+    "Reputation Management, AI Email Marketing Automation. Operations & "
+    "Back-office AI: AI Document Processing, AI Workflow Automation, AI "
+    "Scheduling & Booking, AI Internal Knowledge Assistant. Data & Intelligence "
+    "AI: AI Analytics Dashboard, Predictive AI & Forecasting, AI Market & "
+    "Competitor Intelligence. Custom AI Engineering: Custom LLM Application, AI "
+    "API & System Integration, Fine-Tuned AI Model, AI Website & Landing Pages."
 )
 
 PLANS_SUMMARY = (

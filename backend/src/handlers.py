@@ -203,6 +203,86 @@ def billing(event):
     return _ok(provider.get_billing(auth.customer_id(event)))
 
 
+# ---- public guest checkout (creates the account + order + entitlement) ----
+def checkout(event):
+    """White-label, provider-agnostic checkout. In mock mode this creates the
+    customer's Cognito account (with rich business attributes), records a paid
+    order, grants the entitlement, and records the clickwrap acceptance — all
+    in one idempotent step, so a guest becomes a paying customer atomically."""
+    b = _body(event)
+    pid = (b.get("product_id") or "").strip()
+    email = (b.get("email") or "").strip().lower()
+    password = b.get("password") or ""
+    name = (b.get("name") or "").strip()
+    company = (b.get("company") or "").strip()
+    phone = (b.get("phone") or "").strip()
+    needs = (b.get("needs") or "").strip()
+    role_attr = (b.get("role") or "").strip()
+    agree = bool(b.get("agree"))
+    if not pid or "@" not in email or len(password) < 8:
+        return _err("product_id, a valid email, and a password of 8+ characters are required")
+    cat = catalog_by_id().get(pid) or db.get_product(pid)
+    if not cat:
+        return _err(f"unknown product {pid}")
+    if not agree:
+        return _err("terms_required", 403)
+
+    import boto3
+    cidp = boto3.client("cognito-idp")
+    pool = os.environ.get("USER_POOL_ID")
+    if not pool:
+        return _err("USER_POOL_ID not configured", 500)
+
+    attrs = [{"Name": "email", "Value": email}, {"Name": "email_verified", "Value": "true"}]
+    if name:
+        attrs.append({"Name": "name", "Value": name})
+    if phone:
+        attrs.append({"Name": "phone_number", "Value": phone})
+    if company:
+        attrs.append({"Name": "custom:company", "Value": company})
+    if role_attr:
+        attrs.append({"Name": "custom:role", "Value": role_attr})
+    if needs:
+        attrs.append({"Name": "custom:needs", "Value": needs})
+
+    try:
+        cidp.admin_create_user(
+            UserPoolId=pool, Username=email, MessageAction="SUPPRESS",
+            UserAttributes=attrs)
+    except cidp.exceptions.UsernameExistsException:
+        return _err("An account with that email already exists — please sign in.", 409)
+    except Exception as e:
+        return _err(f"account creation failed: {e}", 500)
+    cidp.admin_set_user_password(UserPoolId=pool, Username=email, Password=password, Permanent=True)
+    cidp.admin_add_user_to_group(UserPoolId=pool, Username=email, GroupName="customers")
+
+    sub = ""
+    r = cidp.admin_get_user(UserPoolId=pool, Username=email)
+    for a in r.get("UserAttributes", []):
+        if a["Name"] == "sub":
+            sub = a["Value"]
+    if not sub:
+        return _err("could not resolve user id", 500)
+
+    price = int(cat.get("price_cents", 0))
+    order_id = db.new_id("ord")
+    items = [{"product_id": pid, "name": cat.get("name", pid), "price_cents": price, "qty": 1}]
+    db.put_order({
+        "order_id": order_id, "customer_id": sub, "items": items,
+        "amount_cents": price, "status": "paid", "fulfillment_status": "in_progress",
+        "provider_ref": "mock", "provider": "mock",
+        "recurring": bool(cat.get("recurring")), "created_at": db.now(),
+    })
+    db.grant(sub, pid, order_id)
+    db.record_charge("mock_" + order_id, order_id, sub, price, "mock")
+    db.record_contract(sub, CONTRACT_TYPE, _active_terms()["version"], _ip(event), _ua(event))
+
+    return _ok({
+        "order_id": order_id, "email": email, "product": cat.get("name", pid),
+        "amount_cents": price, "created": True,
+    })
+
+
 # ---- contracts ----
 def contracts_latest(event):
     return _ok(_active_terms())
@@ -623,6 +703,8 @@ def payment_event(event):
 # ---- routing ----
 _ROUTES = [
     (("GET", "/products"), list_products),
+    (("GET", "/catalog"), list_products),
+    (("POST", "/checkout"), checkout),
     (("GET", "/me"), me),
     (("GET", "/entitlements"), list_entitlements),
     (("GET", "/orders"), list_orders),
