@@ -60,6 +60,15 @@
     log.scrollTop = 1e9;
   }
 
+  var SESSION_KEY = "gai_session";
+  function sessionId() {
+    try {
+      var id = localStorage.getItem(SESSION_KEY);
+      if (!id) { id = "web-" + Math.random().toString(36).slice(2, 10); localStorage.setItem(SESSION_KEY, id); }
+      return id;
+    } catch (e) { return "web-" + Math.random().toString(36).slice(2, 10); }
+  }
+
   launcher.addEventListener("click", function () { panel.classList.toggle("open"); });
   panel.querySelector(".gai-close").addEventListener("click", function () { panel.classList.remove("open"); });
 
@@ -76,9 +85,10 @@
       var r = await fetch(API + "/chat-public", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: q }),
+        body: JSON.stringify({ message: q, session_id: sessionId() }),
       });
       var j = await r.json();
+      if (j.session_id) { try { localStorage.setItem(SESSION_KEY, j.session_id); } catch (e) {} }
       bubble(j.answer || "Sorry, I couldn't answer that — email hello@genai-usa.com.", "ai");
     } catch (err) {
       bubble("Sorry, I'm having trouble connecting. Email hello@genai-usa.com.", "ai");

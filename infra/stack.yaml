@@ -19,8 +19,8 @@ Parameters:
     Description: Stripe webhook signing secret (leave empty while provider=mock).
   BedrockModelId:
     Type: String
-    Default: ''
-    Description: Bedrock model id for the RAG bot (e.g. anthropic.claude-3-haiku-20240307-v1:0). Empty = rule-based fallback.
+    Default: 'amazon.nova-lite-v1:0'
+    Description: Bedrock model id for the RAG bot (provider-agnostic Converse API). amazon.nova-lite-v1:0 works today; switch to anthropic.claude-haiku-4-5-20251001-v1:0 after the Anthropic use-case form. Empty = rule-based fallback.
 
 # ============ DynamoDB ============
 Resources:

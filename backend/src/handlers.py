@@ -334,15 +334,132 @@ def accept_contract(event):
 
 
 # ---- RAG support bot ----
+SUPPORT_SYSTEM = (
+    "You are the friendly support assistant for Generative Artificial Intelligence "
+    "(genai-usa.com), inside the customer portal. You know the full catalog and what "
+    "this customer already owns.\n\n"
+    "Rules:\n"
+    "- Answer directly and warmly, in 2-4 sentences unless they ask for a list.\n"
+    "- Quote exact prices from the catalog only — never invent prices, guarantees, or timelines.\n"
+    "- Recommend by what the customer wants to AUTOMATE, never by their industry.\n"
+    "- If they ask what to buy, ask one quick clarifying question about what they're trying "
+    "to get off their plate, then suggest the best match.\n\n"
+    "Catalog:\n{catalog}\n\nCustomer owns: {owned}"
+)
+
+SALES_SYSTEM = (
+    "You are the friendly sales assistant on genai-usa.com (Generative Artificial "
+    "Intelligence), a productized AI agency.\n\n"
+    "Rules:\n"
+    "- Answer the visitor's question, then gently steer toward a product or the contact page.\n"
+    "- Recommend by what they want to AUTOMATE, never by their industry.\n"
+    "- Quote exact prices from the catalog only — never invent prices, guarantees, or timelines.\n"
+    "- Keep answers short and scannable.\n\n"
+    "Catalog:\n{catalog}"
+)
+
+STAFF_SYSTEM = (
+    "You are the internal knowledge assistant for genai-usa.com staff. Use the company "
+    "knowledge base and catalog below to answer accurately and concisely. Never invent "
+    "prices or policies.\n\n"
+    "Knowledge base:\n{ctx}\n\nCatalog:\n{catalog}"
+)
+
+
+def _catalog_text() -> str:
+    catalog = db.list_products() or CATALOG
+    lines = []
+    for p in catalog:
+        price = int(p.get("price_cents", 0)) / 100
+        monthly = int(p.get("monthly_cents", 0)) / 100
+        price_s = f"${price:,.0f}" + (f" + ${monthly:,.0f}/mo" if monthly else "")
+        kind = p.get("kind", "product")
+        desc = (p.get("description") or "").strip()[:140]
+        lines.append(f"- {p['name']} ({kind}, {p['product_id']}): {price_s}. {desc}")
+    return "\n".join(lines)
+
+
+def _conversation(history, msg):
+    msgs = []
+    for h in (history or [])[-8:]:
+        role = "assistant" if h.get("role") == "assistant" else "user"
+        msgs.append({"role": role, "content": [{"text": h.get("text", "")}]})
+    msgs.append({"role": "user", "content": [{"text": msg}]})
+    return msgs
+
+
+def _llm(system: str, messages: list) -> str:
+    """Bedrock Converse (provider-agnostic). Returns text; raises on failure."""
+    import boto3
+    br = boto3.client("bedrock-runtime",
+                      region_name=os.environ.get("AWS_REGION", "us-east-2"))
+    r = br.converse(
+        modelId=os.environ["BEDROCK_MODEL_ID"],
+        system=[{"text": system}],
+        messages=messages,
+        inferenceConfig={"maxTokens": 600, "temperature": 0.5},
+    )
+    return r["output"]["message"]["content"][0]["text"]
+
+
+def _fmt_product(p: dict) -> str:
+    price = int(p.get("price_cents", 0)) / 100
+    monthly = int(p.get("monthly_cents", 0)) / 100
+    price_s = f"${price:,.0f}" + (f" + ${monthly:,.0f}/mo" if monthly else "")
+    return f"{p['name']} — {p.get('description', '')} Price: {price_s}."
+
+
+_STOPWORDS = {
+    "that", "this", "those", "these", "your", "their", "there", "here",
+    "what", "how", "much", "many", "about", "price", "cost", "pricing",
+    "with", "from", "have", "has", "had", "will", "would", "should",
+    "could", "want", "need", "more", "less", "most", "some", "only",
+    "just", "very", "then", "than", "which", "where", "when", "who",
+    "into", "onto", "does", "were", "was", "are", "been", "being",
+}
+
+
+def _match_product(m: str):
+    """Token-overlap match against product names (most hits wins), ignoring stopwords."""
+    cat = catalog_by_id()
+    best = None
+    for pid, p in cat.items():
+        words = [w for w in re.split(r"[^a-z0-9]+", p["name"].lower())
+                 if len(w) >= 4 and w not in _STOPWORDS]
+        if not words:
+            continue
+        hits = sum(1 for w in words if w in m)
+        if hits and (best is None or hits > best[0]):
+            best = (hits, p)
+    return best[1] if best else None
+
+
+def _last_product(history):
+    """Last product the assistant mentioned (for 'how much is THAT' follow-ups)."""
+    cat = catalog_by_id()
+    for h in reversed(history or []):
+        if h.get("role") != "assistant":
+            continue
+        txt = h.get("text", "").lower()
+        for pid, p in cat.items():
+            if p["name"].lower() in txt:
+                return p
+    return None
+
+
 def chat(event):
     b = _body(event)
-    msg = b.get("message", "")
+    msg = (b.get("message") or "").strip()
     if not msg:
         return _err("message required")
     cid = auth.customer_id(event)
+    session_id = "cust:" + cid
     ents = db.list_entitlements(cid)
-    ctx = _build_context(cid, ents)
-    answer = _answer(ctx, msg)
+    owned = [catalog_by_id().get(e["product_id"], {}).get("name", e["product_id"]) for e in ents]
+    history = db.get_chat(session_id)
+    db.save_chat(session_id, "user", msg)
+    answer = _answer(owned, msg, history)
+    db.save_chat(session_id, "assistant", answer)
     return _ok({"answer": answer, "context_owned": [e["product_id"] for e in ents]})
 
 
@@ -357,126 +474,111 @@ def _catalog_summary() -> str:
     return "\n".join(lines)
 
 
-def _build_context(cid: str, ents: list) -> str:
-    owned = [e["product_id"] for e in ents] or []
-    owned_names = [catalog_by_id().get(p, {}).get("name", p) for p in owned]
-    lines = [f"Customer owns: {', '.join(owned_names) if owned_names else 'nothing yet'}"]
-    lines.append(_catalog_summary())
-    return "\n".join(lines)
-
-
-def _answer(ctx: str, msg: str) -> str:
-    model = os.environ.get("BEDROCK_MODEL_ID")
-    if model:
+def _answer(owned: list, msg: str, history=None) -> str:
+    history = history or []
+    if os.environ.get("BEDROCK_MODEL_ID"):
         try:
-            import boto3
-            br = boto3.client("bedrock-runtime",
-                              region_name=os.environ.get("AWS_REGION", "us-east-2"))
-            body = {
-                "anthropic_version": "bedrock-2023-05-31",
-                "max_tokens": 600,
-                "system": ("You are the support assistant for Generative Artificial "
-                           "Intelligence (genai-usa.com). Be concise and helpful. Use the "
-                           "catalog + customer context below to give accurate, personalized "
-                           "answers. Never invent prices."),
-                "messages": [{"role": "user",
-                              "content": f"Context:\n{ctx}\n\nQuestion: {msg}"}],
-            }
-            r = br.invoke_model(modelId=model, body=json.dumps(body))
-            return json.loads(r["body"].read())["content"][0]["text"]
-        except Exception as e:
-            return _fallback(ctx, msg) + f"\n\n_(bedrock unavailable: {e})_"
-    return _fallback(ctx, msg)
+            system = SUPPORT_SYSTEM.format(
+                catalog=_catalog_text(),
+                owned=", ".join(owned) if owned else "nothing yet",
+            )
+            return _llm(system, _conversation(history, msg))
+        except Exception:
+            return _fallback(msg, history)
+    return _fallback(msg, history)
 
 
-def _fallback(ctx: str, msg: str) -> str:
+def _fallback(msg: str, history=None) -> str:
     m = msg.lower()
-    cat = catalog_by_id()
-    # token-overlap match against product names (prefer most hits)
-    best = None
-    for pid, p in cat.items():
-        words = [w for w in re.split(r"[^a-z0-9]+", p["name"].lower()) if len(w) >= 4]
-        if not words:
-            continue
-        hits = sum(1 for w in words if w in m)
-        if hits and (best is None or hits > best[0]):
-            best = (hits, p)
-    if best:
-        p = best[1]
-        price = int(p["price_cents"]) / 100
-        monthly = int(p.get("monthly_cents", 0)) / 100
-        price_s = f"${price:,.0f}" + (f" + ${monthly:,.0f}/mo" if monthly else "")
-        return f"{p['name']} — {p['description']} Price: {price_s}."
+    history = history or []
+    # greetings / pleasantries
+    if m in ("hi", "hello", "hey", "yo", "hi there", "hello there", "good morning", "good evening"):
+        return "Hi! I can help with your purchases, pricing, and picking the right product. What do you need?"
+    if any(k in m for k in ("thanks", "thank you", "thx", "appreciate", "awesome", "great")):
+        return "You're welcome! Anything else I can help with?"
+    if m in ("bye", "goodbye", "see you", "later"):
+        return "Take care! Reach out anytime, or email hello@genai-usa.com."
+    # human handoff
+    if any(k in m for k in ("human", "real person", "someone", "agent", "talk to",
+                            "support ticket", "email you", "contact us")):
+        return ("Happy to connect you with a human. Email hello@genai-usa.com, or open a "
+                "Support ticket from the left panel — a real person replies within 24 hours.")
+    # specific product
+    p = _match_product(m)
+    if p:
+        return _fmt_product(p)
+    # resolve "that"/"it" to the last product mentioned
+    if any(k in m for k in ("how much", "price", "cost", "tell me more", "more about", "what about")) \
+            and any(k in m for k in ("that", "it", "this", "those")):
+        lp = _last_product(history)
+        if lp:
+            return _fmt_product(lp)
+    # recommendation
     if any(k in m for k in ("recommend", "what should i buy", "what should i purchase",
                             "what should i get", "what products should", "what do you suggest",
                             "suggest", "where do i start", "where do i begin",
                             "what do i need", "which product", "which service")):
         return marketing.RECOMMEND
+    # pricing / plans
     if any(k in m for k in ("price", "cost", "much", "plan", "pricing")):
         return ("Plans: $4,999/mo AI Concierge · $7,499/mo AI Growth Team · "
                 "$14,499/mo Fractional AI Department · $19,999/mo AI Transformation Partner.")
+    # chatbots
     if any(k in m for k in ("chatbot", "bot", "support")):
         return "We build support chatbots trained on your docs, live in 7–10 days. See the Shop for pricing."
+    # voice
     if any(k in m for k in ("voice", "call", "receptionist", "missed")):
-        return "Our Missed-Call Recovery installs an AI voice receptionist in 48 hours — it answers, books, and confirms by SMS."
+        return "Our AI voice receptionist answers, books, and confirms by SMS — live in 48 hours. See the Shop for pricing."
+    # purchase history
     if any(k in m for k in ("what did i buy", "what have i bought", "what did i purchase",
                             "what have i purchased", "my order", "my orders", "my purchase",
                             "my purchases", "what do i own", "check my order", "show my order")):
         return "Check the left panel for everything you've purchased. If something's missing, email hello@genai-usa.com."
-    return "I can help with our services, plans, and your purchases. Try asking about pricing, chatbots, voice agents, or what you've bought."
+    # catch-all: ask a clarifying question
+    return ("I can help with pricing, what to buy, or your purchases. What are you trying "
+            "to automate — answering questions, calls, leads, or content?")
 
 
 # ---- public website sales bot (no auth) ----
 def chat_public(event):
     b = _body(event)
-    msg = b.get("message", "")
+    msg = (b.get("message") or "").strip()
     if not msg:
         return _err("message required")
-    return _ok({"answer": _public_answer(msg)})
+    session_id = b.get("session_id") or "pub:" + db.new_id("pub")
+    history = db.get_chat(session_id)
+    db.save_chat(session_id, "user", msg)
+    answer = _public_answer(msg, history)
+    db.save_chat(session_id, "assistant", answer)
+    return _ok({"answer": answer, "session_id": session_id})
 
 
-def _public_answer(msg: str) -> str:
-    model = os.environ.get("BEDROCK_MODEL_ID")
-    ctx = marketing.context() + "\n\nCatalog:\n" + _catalog_summary()
-    if model:
+def _public_answer(msg: str, history=None) -> str:
+    history = history or []
+    if os.environ.get("BEDROCK_MODEL_ID"):
         try:
-            import boto3
-            br = boto3.client("bedrock-runtime",
-                              region_name=os.environ.get("AWS_REGION", "us-east-2"))
-            body = {
-                "anthropic_version": "bedrock-2023-05-31",
-                "max_tokens": 600,
-                "system": ("You are the sales assistant on genai-usa.com. You know every "
-                           "product, service, and plan. Be warm, concise, and persuasive: "
-                           "answer the visitor's question, then gently steer toward a plan "
-                           "or the contact page. Use only the facts provided — never invent "
-                           "prices, guarantees, or timelines."),
-                "messages": [{"role": "user", "content": f"Context:\n{ctx}\n\nVisitor: {msg}"}],
-            }
-            r = br.invoke_model(modelId=model, body=json.dumps(body))
-            return json.loads(r["body"].read())["content"][0]["text"]
-        except Exception as e:
-            return _public_fallback(msg) + f"\n\n_(assistant offline: {e})_"
-    return _public_fallback(msg)
+            system = SALES_SYSTEM.format(catalog=_catalog_text())
+            return _llm(system, _conversation(history, msg))
+        except Exception:
+            return _public_fallback(msg, history)
+    return _public_fallback(msg, history)
 
 
-def _public_fallback(msg: str) -> str:
+def _public_fallback(msg: str, history=None) -> str:
     m = msg.lower()
-    cat = catalog_by_id()
-    best = None
-    for pid, p in cat.items():
-        words = [w for w in re.split(r"[^a-z0-9]+", p["name"].lower()) if len(w) >= 4]
-        if not words:
-            continue
-        hits = sum(1 for w in words if w in m)
-        if hits and (best is None or hits > best[0]):
-            best = (hits, p)
-    if best:
-        p = best[1]
-        price = int(p["price_cents"]) / 100
-        monthly = int(p.get("monthly_cents", 0)) / 100
-        price_s = f"${price:,.0f}" + (f" + ${monthly:,.0f}/mo" if monthly else "")
-        return f"{p['name']} — {p['description']} Price: {price_s}. {marketing.CTA}"
+    history = history or []
+    if m in ("hi", "hello", "hey", "yo", "hi there", "hello there"):
+        return f"Hi! {marketing.PITCH} {marketing.CTA}"
+    if any(k in m for k in ("thanks", "thank you", "thx", "appreciate")):
+        return f"You're welcome! Anything else? {marketing.CTA}"
+    p = _match_product(m)
+    if p:
+        return f"{_fmt_product(p)} {marketing.CTA}"
+    if any(k in m for k in ("how much", "price", "cost", "tell me more")) \
+            and any(k in m for k in ("that", "it", "this", "those")):
+        lp = _last_product(history)
+        if lp:
+            return f"{_fmt_product(lp)} {marketing.CTA}"
     if any(k in m for k in ("recommend", "what should i buy", "what should i purchase",
                             "what should i get", "what products should", "suggest",
                             "where do i start", "where do i begin", "what do i need",
@@ -492,30 +594,43 @@ def _public_fallback(msg: str) -> str:
         return ("Why us:\n" + "\n".join("- " + s for s in marketing.VALUE_PROPS)
                 + "\n\nGuarantees:\n" + "\n".join("- " + s for s in marketing.GUARANTEES)
                 + f"\n\n{marketing.CTA}")
+    if any(k in m for k in ("human", "real person", "someone", "talk to", "contact", "email")):
+        return "Happy to connect you with a human — email hello@genai-usa.com or use the Contact page."
     if any(k in m for k in ("what", "service", "offer", "do you", "sell", "help")):
         return f"{marketing.SERVICES_SUMMARY}\n\n{marketing.PLANS_SUMMARY}\n\n{marketing.CTA}"
-    if any(k in m for k in ("hi", "hello", "hey", "yo")):
-        return f"Hi! {marketing.PITCH} {marketing.CTA}"
-    return f"{marketing.PITCH}\n\n{marketing.PLANS_SUMMARY}\n\n{marketing.CTA}"
+    return (f"{marketing.PITCH}\n\nWhat are you trying to automate — answering questions, "
+            f"calls, leads, or content? {marketing.CTA}")
 
 
 # ---- staff assistant (dogfood: our own internal knowledge assistant) ----
 def staff_chat(event):
     _require_staff(event)
     b = _body(event)
-    msg = b.get("message", "")
+    msg = (b.get("message") or "").strip()
     if not msg:
         return _err("message required")
-    ctx = company.context() + "\n\nCatalog:\n" + _catalog_summary()
+    session_id = "staff:" + auth.customer_id(event)
+    history = db.get_chat(session_id)
+    db.save_chat(session_id, "user", msg)
     if os.environ.get("BEDROCK_MODEL_ID"):
-        return _ok({"answer": _answer(ctx, msg)})
-    # rule-based: match internal docs by topic keyword, else catalog fallback
+        try:
+            system = STAFF_SYSTEM.format(ctx=company.context(), catalog=_catalog_text())
+            answer = _llm(system, _conversation(history, msg))
+        except Exception:
+            answer = _staff_fallback(msg)
+    else:
+        answer = _staff_fallback(msg)
+    db.save_chat(session_id, "assistant", answer)
+    return _ok({"answer": answer})
+
+
+def _staff_fallback(msg: str) -> str:
     m = msg.lower()
     for topic, text in company.INTERNAL_DOCS:
         words = [w for w in re.split(r"[^a-z0-9]+", topic.lower()) if len(w) >= 4]
         if words and any(w in m for w in words):
-            return _ok({"answer": f"{topic}: {text}"})
-    return _ok({"answer": _fallback(ctx, msg)})
+            return f"{topic}: {text}"
+    return _fallback(msg, [])
 
 
 # ---- support / relay (customer) ----

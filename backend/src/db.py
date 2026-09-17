@@ -363,3 +363,16 @@ def save_chat(session_id: str, role: str, text: str) -> None:
     table("chat").put_item(Item={
         "session_id": session_id, "ts": now(), "role": role, "text": text,
     })
+
+
+def get_chat(session_id: str, limit: int = 12) -> list[dict]:
+    """Most recent `limit` turns for a session, oldest first."""
+    r = table("chat").query(
+        KeyConditionExpression="session_id = :s",
+        ExpressionAttributeValues={":s": session_id},
+        ScanIndexForward=False,
+        Limit=limit,
+    )
+    items = r.get("Items", [])
+    items.reverse()
+    return items

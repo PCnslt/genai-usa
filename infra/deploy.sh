@@ -24,6 +24,7 @@ aws cloudformation deploy \
   --template-file /tmp/genai-packaged.yaml \
   --stack-name "$STACK" \
   --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
+  --parameter-overrides "BedrockModelId=${BEDROCK_MODEL_ID:-amazon.nova-lite-v1:0}" \
   --region "$R"
 
 echo "=== stack outputs ==="
