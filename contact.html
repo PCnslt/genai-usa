@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Contact — Generative Artificial Intelligence</title>
+<meta name="description" content="Start a project with Generative Artificial Intelligence. Fixed-price AI, quoted within 24 hours.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+<div class="grain"></div>
+<div id="glow"></div>
+
+<nav>
+  <div class="nav-in">
+    <a href="index.html" class="logo">Generative Artificial Intelligence</a>
+    <div class="links">
+      <a href="services.html">Services</a>
+      <a href="how-it-works.html">How it works</a>
+      <a href="contact.html" class="active">Contact</a>
+    </div>
+  </div>
+</nav>
+
+<header class="page-head wrap">
+  <div class="brand">Generative Artificial Intelligence</div>
+  <h1>Let's build something.</h1>
+  <p>Tell us what's eating your team's time — we'll quote it within 24 hours.</p>
+</header>
+
+<section class="contact wrap">
+  <div class="email-line reveal">
+    <a href="mailto:hello@genai-usa.com">hello@genai-usa.com</a>
+  </div>
+
+  <form class="form reveal" id="contactForm">
+    <label>
+      <div class="lbl">Name</div>
+      <input type="text" name="name" required>
+    </label>
+    <label>
+      <div class="lbl">Email</div>
+      <input type="email" name="email" required>
+    </label>
+    <label>
+      <div class="lbl">What do you need?</div>
+      <select name="service">
+        <option>Chatbots &amp; support agents</option>
+        <option>AI voice agents</option>
+        <option>Workflow automation</option>
+        <option>Data &amp; insights</option>
+        <option>AI visuals &amp; branding</option>
+        <option>Video &amp; motion</option>
+        <option>Voice &amp; audio</option>
+        <option>Copy, content &amp; localization</option>
+        <option>AI roadmap &amp; audit</option>
+        <option>Team training</option>
+        <option>AI integration</option>
+        <option>Something else</option>
+      </select>
+    </label>
+    <label>
+      <div class="lbl">Message</div>
+      <textarea name="message" placeholder="What's the outcome you want?" required></textarea>
+    </label>
+    <button type="submit" class="btn" style="width:100%;">Send message</button>
+    <div class="note">This opens your email client — or just write us directly at hello@genai-usa.com.</div>
+  </form>
+</section>
+
+<footer>
+  <div>© 2026 Generative Artificial Intelligence</div>
+  <div>AI that does the work.</div>
+</footer>
+
+<script>
+  document.getElementById('contactForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    const f = this;
+    const name = f.name.value.trim(), email = f.email.value.trim();
+    const service = f.service.value, msg = f.message.value.trim();
+    const subject = encodeURIComponent('Project inquiry — ' + service);
+    const body = encodeURIComponent('Name: ' + name + '\nEmail: ' + email + '\nService: ' + service + '\n\n' + msg);
+    window.location.href = 'mailto:hello@genai-usa.com?subject=' + subject + '&body=' + body;
+  });
+</script>
+<script src="assets/js/main.js"></script>
+</body>
+</html>
