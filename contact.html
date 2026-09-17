@@ -70,7 +70,7 @@
       <textarea name="message" placeholder="What's the outcome you want?" required></textarea>
     </label>
     <button type="submit" class="btn" style="width:100%;">Send message</button>
-    <div class="note">This opens your email client — or just write us directly at hello@genai-usa.com.</div>
+    <div class="note">We'll reply within 24 hours.</div>
   </form>
 </section>
 
@@ -80,14 +80,31 @@
 </footer>
 
 <script>
-  document.getElementById('contactForm').addEventListener('submit', function (e) {
+  document.getElementById('contactForm').addEventListener('submit', async function (e) {
     e.preventDefault();
     const f = this;
-    const name = f.name.value.trim(), email = f.email.value.trim();
-    const service = f.service.value, msg = f.message.value.trim();
-    const subject = encodeURIComponent('Project inquiry — ' + service);
-    const body = encodeURIComponent('Name: ' + name + '\nEmail: ' + email + '\nService: ' + service + '\n\n' + msg);
-    window.location.href = 'mailto:hello@genai-usa.com?subject=' + subject + '&body=' + body;
+    const note = f.querySelector('.note');
+    try {
+      const r = await fetch('https://fj2i0k2wvg.execute-api.us-east-2.amazonaws.com/leads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: f.name.value.trim(),
+          email: f.email.value.trim(),
+          interest: f.service.value,
+          message: f.message.value.trim(),
+          source: 'contact',
+        }),
+      });
+      const j = await r.json();
+      if (!r.ok || j.error) throw new Error(j.error || 'failed');
+      note.textContent = 'Thanks — we got it. We\u2019ll reply within 24 hours.';
+      note.style.color = '#4f7cff';
+      f.reset();
+    } catch (err) {
+      note.textContent = 'Something went wrong — email us at hello@genai-usa.com.';
+      note.style.color = '#ff7b9c';
+    }
   });
 </script>
 <script src="assets/js/main.js"></script>

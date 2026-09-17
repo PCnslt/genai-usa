@@ -128,6 +128,7 @@
     <div class="side-head"><h2>Operations</h2></div>
     <ul class="opsnav" id="opsNav">
       <li data-panel="opsOrders" class="active employeeOnly">Orders</li>
+      <li data-panel="opsLeads" class="employeeOnly">Leads</li>
       <li data-panel="opsSupport">Support inbox</li>
       <li data-panel="opsContracts" class="employeeOnly">Contracts</li>
       <li data-panel="opsProducts" class="adminOnly">Products</li>
@@ -141,6 +142,12 @@
       <h2>All orders</h2>
       <p class="muted small">Advance fulfillment status as work moves to delivery.</p>
       <div id="opsOrdersList" class="opslist"></div>
+    </section>
+
+    <section class="card panel" id="opsLeads" style="display:none">
+      <h2>Leads</h2>
+      <p class="muted small">Inbound leads from the website — advance them through the pipeline.</p>
+      <div id="opsLeadsList" class="opslist"></div>
     </section>
 
     <section class="card panel" id="opsSupport" style="display:none">

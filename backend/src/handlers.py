@@ -283,6 +283,35 @@ def checkout(event):
     })
 
 
+# ---- public lead capture (dogfooding our own lead-gen/CRM product) ----
+def create_lead(event):
+    b = _body(event)
+    name = (b.get("name") or "").strip()
+    email = (b.get("email") or "").strip()
+    if not name or "@" not in email:
+        return _err("name and a valid email are required")
+    lead_id = db.put_lead(
+        name, email, (b.get("company") or "").strip(),
+        (b.get("interest") or "").strip(), (b.get("message") or "").strip(),
+        b.get("source", "website"))
+    return _ok({"lead_id": lead_id, "received": True})
+
+
+# ---- ops: leads (employee + admin CRM) ----
+def ops_leads(event):
+    _require_employee(event)
+    return _ok(db.list_leads())
+
+
+def ops_lead_status(event, params):
+    _require_employee(event)
+    status = _body(event).get("status")
+    if status not in ("new", "contacted", "qualified", "won", "lost"):
+        return _err("status must be new|contacted|qualified|won|lost")
+    db.set_lead_status(params["id"], status)
+    return _ok({"lead_id": params["id"], "status": status})
+
+
 # ---- contracts ----
 def contracts_latest(event):
     return _ok(_active_terms())
@@ -715,6 +744,7 @@ _ROUTES = [
     (("POST", "/contracts/accept"), accept_contract),
     (("POST", "/chat"), chat),
     (("POST", "/chat-public"), chat_public),
+    (("POST", "/leads"), create_lead),
     (("POST", "/support"), open_support),
     (("GET", "/support"), my_support),
     (("POST", "/webhooks/payments"), payment_event),
@@ -732,6 +762,8 @@ _ROUTES = [
     (("POST", "/ops/users"), ops_invite_user),
     (("POST", "/ops/users/{username}/role"), ops_set_role),
     (("GET", "/ops/finance"), ops_finance),
+    (("GET", "/ops/leads"), ops_leads),
+    (("POST", "/ops/leads/{id}/status"), ops_lead_status),
     (("POST", "/ops/contracts/template"), ops_set_contract),
 ]
 

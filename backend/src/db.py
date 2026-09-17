@@ -17,6 +17,7 @@ _TABLES = {
     "chat": os.environ.get("TABLE_CHAT", "genai-chat"),
     "support": os.environ.get("TABLE_SUPPORT", "genai-conversations"),
     "meta": os.environ.get("TABLE_META", "genai-meta"),
+    "leads": os.environ.get("TABLE_LEADS", "genai-leads"),
 }
 
 _ddb = boto3.resource("dynamodb")
@@ -296,6 +297,33 @@ def get_meta(key: str) -> Optional[str]:
 
 def set_meta(key: str, value: str) -> None:
     table("meta").put_item(Item={"key": key, "value": value, "updated_at": now()})
+
+
+# ---- leads (internal CRM — we dogfood our own lead-gen/CRM product) ----
+def put_lead(name: str, email: str, company: str, interest: str,
+             message: str, source: str) -> str:
+    lead_id = new_id("lead")
+    table("leads").put_item(Item={
+        "lead_id": lead_id, "name": name, "email": email, "company": company,
+        "interest": interest, "message": message, "source": source,
+        "status": "new", "created_at": now(), "updated_at": now(),
+    })
+    return lead_id
+
+
+def list_leads() -> list[dict]:
+    items = table("leads").scan().get("Items", [])
+    items.sort(key=lambda l: l.get("created_at", 0), reverse=True)
+    return items
+
+
+def set_lead_status(lead_id: str, status: str) -> None:
+    table("leads").update_item(
+        Key={"lead_id": lead_id},
+        UpdateExpression="SET #s = :s, updated_at = :t",
+        ExpressionAttributeNames={"#s": "status"},
+        ExpressionAttributeValues={":s": status, ":t": now()},
+    )
 
 
 # ---- chat history (optional persistence) ----

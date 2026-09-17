@@ -132,6 +132,16 @@ Resources:
       KeySchema:
         - { AttributeName: key, KeyType: HASH }
 
+  LeadsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: genai-leads
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - { AttributeName: lead_id, AttributeType: S }
+      KeySchema:
+        - { AttributeName: lead_id, KeyType: HASH }
+
   # ============ Cognito (auth + roles) ============
   UserPool:
     Type: AWS::Cognito::UserPool
@@ -265,6 +275,7 @@ Resources:
           TABLE_CHAT: genai-chat
           TABLE_SUPPORT: genai-conversations
           TABLE_META: genai-meta
+          TABLE_LEADS: genai-leads
 
   # ============ API Gateway (HTTP API) ============
   HttpApi:
@@ -348,6 +359,15 @@ Resources:
     Properties:
       ApiId: !Ref HttpApi
       RouteKey: POST /checkout
+      Target: !Sub 'integrations/${Integration}'
+      AuthorizationType: NONE
+
+  # Public lead capture (no auth) — the marketing site's "Get started" form.
+  LeadsRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: POST /leads
       Target: !Sub 'integrations/${Integration}'
       AuthorizationType: NONE
 

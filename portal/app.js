@@ -412,15 +412,46 @@ function renderOpsFinance(f) {
     `<p>By provider: ${Object.entries(f.by_provider_cents || {}).map(([k, v]) => `${esc(k)} ${money(v)}`).join(" · ") || "—"}</p>`;
 }
 
+function renderOpsLeads(list) {
+  const box = el("opsLeadsList");
+  box.innerHTML = "";
+  const flow = ["new", "contacted", "qualified", "won"];
+  (list || []).forEach((l) => {
+    const cur = l.status || "new";
+    const i = Math.max(0, flow.indexOf(cur));
+    const next = flow[Math.min(i + 1, flow.length - 1)];
+    const when = new Date((l.created_at || 0) * 1000).toLocaleDateString();
+    const d = document.createElement("div");
+    d.className = "ops-row";
+    d.innerHTML =
+      `<div class="ops-main"><b>${esc(l.name)}</b><span class="muted small">${esc(l.email)}${l.company ? " · " + esc(l.company) : ""} · ${when} · ${esc(l.interest || "")}</span>${l.message ? `<div class="muted small" style="margin-top:4px">${esc(l.message)}</div>` : ""}</div>` +
+      `<div class="ops-side"><span class="status">${esc(cur)}</span>` +
+      (next !== cur ? `<button class="btn ghost small" data-lid="${esc(l.lead_id)}" data-next="${next}">→ ${next}</button>` : "") +
+      (cur !== "lost" ? `<button class="btn ghost small" data-lost="${esc(l.lead_id)}">lost</button>` : "") +
+      `</div>`;
+    box.appendChild(d);
+  });
+  box.querySelectorAll("[data-lid]").forEach((b) =>
+    b.addEventListener("click", async () => {
+      await api(`/ops/leads/${b.dataset.lid}/status`, { method: "POST", body: JSON.stringify({ status: b.dataset.next }) });
+      loadOps();
+    }));
+  box.querySelectorAll("[data-lost]").forEach((b) =>
+    b.addEventListener("click", async () => {
+      await api(`/ops/leads/${b.dataset.lost}/status`, { method: "POST", body: JSON.stringify({ status: "lost" }) });
+      loadOps();
+    }));
+}
+
 async function loadOps() {
   if (role === "contractor") {
     const support = await api("/ops/support");
     renderOpsSupport(support);
     return;
   }
-  const [orders, support, contracts, products, users, finance] = await Promise.all([
+  const [orders, support, contracts, products, users, finance, leads] = await Promise.all([
     api("/ops/orders"), api("/ops/support"), api("/ops/contracts"),
-    api("/products"), api("/ops/users"), api("/ops/finance"),
+    api("/products"), api("/ops/users"), api("/ops/finance"), api("/ops/leads"),
   ]);
   renderOpsOrders(orders);
   renderOpsSupport(support);
@@ -428,6 +459,7 @@ async function loadOps() {
   renderOpsProducts(products.products || products);
   renderOpsUsers(users.users || []);
   renderOpsFinance(finance);
+  renderOpsLeads(leads);
 }
 
 /* ---- view switching ---- */
