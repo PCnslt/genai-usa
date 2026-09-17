@@ -166,6 +166,22 @@ a { color: inherit; text-decoration: none; }
 .supply-role b { font-weight: 500; }
 .supply-role span { color: var(--muted); font-size: 11px; }
 .supply-role .cost { color: var(--ink); }
+.supply-role .cov { margin-top: 3px; font-size: 10px; color: #7fe0a8; }
+/* roster (contractor tracker) */
+.roster-add { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.roster-add input, .roster-add select { background: transparent; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; color: var(--ink); font-family: inherit; font-size: 13px; outline: none; }
+.roster-add input:focus, .roster-add select:focus { border-color: var(--purple); }
+.roster-add select option { background: #14101f; }
+.roster { display: flex; flex-direction: column; gap: 8px; margin-bottom: 6px; }
+.roster-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+.roster-main { display: flex; flex-direction: column; gap: 2px; }
+.roster-main b { font-weight: 500; font-size: 14px; }
+.roster-side { display: flex; align-items: center; gap: 8px; }
+.st { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; padding: 2px 8px; border-radius: 999px; }
+.st-interviewing { background: rgba(155,92,255,.15); color: #c9b3ff; }
+.st-hired { background: rgba(79,124,255,.18); color: #a8c2ff; }
+.st-assigned { background: rgba(46,204,113,.16); color: #7fe0a8; }
 @media (max-width: 760px) {
   .supply-row { grid-template-columns: 1fr; }
+  .roster-row { flex-direction: column; align-items: flex-start; }
 }

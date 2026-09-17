@@ -18,6 +18,7 @@ _TABLES = {
     "support": os.environ.get("TABLE_SUPPORT", "genai-conversations"),
     "meta": os.environ.get("TABLE_META", "genai-meta"),
     "leads": os.environ.get("TABLE_LEADS", "genai-leads"),
+    "roster": os.environ.get("TABLE_ROSTER", "genai-roster"),
 }
 
 _ddb = boto3.resource("dynamodb")
@@ -324,6 +325,37 @@ def set_lead_status(lead_id: str, status: str) -> None:
         ExpressionAttributeNames={"#s": "status"},
         ExpressionAttributeValues={":s": status, ":t": now()},
     )
+
+
+# ---- contractor roster (admin: track interviewing -> hired -> assigned) ----
+def put_contractor(name: str, role: str, platform: str, price: str,
+                   notes: str) -> str:
+    cid = new_id("contractor")
+    table("roster").put_item(Item={
+        "contractor_id": cid, "name": name, "role": role, "platform": platform,
+        "price": price, "notes": notes, "status": "interviewing",
+        "created_at": now(), "updated_at": now(),
+    })
+    return cid
+
+
+def list_contractors() -> list[dict]:
+    items = table("roster").scan().get("Items", [])
+    items.sort(key=lambda c: c.get("created_at", 0))
+    return items
+
+
+def set_contractor_status(contractor_id: str, status: str) -> None:
+    table("roster").update_item(
+        Key={"contractor_id": contractor_id},
+        UpdateExpression="SET #s = :s, updated_at = :t",
+        ExpressionAttributeNames={"#s": "status"},
+        ExpressionAttributeValues={":s": status, ":t": now()},
+    )
+
+
+def delete_contractor(contractor_id: str) -> None:
+    table("roster").delete_item(Key={"contractor_id": contractor_id})
 
 
 # ---- chat history (optional persistence) ----

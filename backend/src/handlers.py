@@ -721,6 +721,38 @@ def ops_supply(event):
     return _ok({"roles": supply.ROLES, "supply": supply.SUPPLY})
 
 
+def ops_roster(event):
+    _require_admin(event)
+    return _ok(db.list_contractors())
+
+
+def ops_roster_add(event):
+    _require_admin(event)
+    b = _body(event)
+    name = (b.get("name") or "").strip()
+    role = (b.get("role") or "").strip()
+    if not name or not role:
+        return _err("name and role are required")
+    cid = db.put_contractor(name, role, (b.get("platform") or "").strip(),
+                            (b.get("price") or "").strip(), (b.get("notes") or "").strip())
+    return _ok({"contractor_id": cid, "created": True})
+
+
+def ops_roster_status(event, params):
+    _require_admin(event)
+    status = _body(event).get("status")
+    if status not in ("interviewing", "hired", "assigned"):
+        return _err("status must be interviewing|hired|assigned")
+    db.set_contractor_status(params["id"], status)
+    return _ok({"contractor_id": params["id"], "status": status})
+
+
+def ops_roster_delete(event, params):
+    _require_admin(event)
+    db.delete_contractor(params["id"])
+    return _ok({"contractor_id": params["id"], "deleted": True})
+
+
 def ops_set_contract(event):
     _require_admin(event)
     b = _body(event)
@@ -790,6 +822,10 @@ _ROUTES = [
     (("POST", "/ops/users/{username}/role"), ops_set_role),
     (("GET", "/ops/finance"), ops_finance),
     (("GET", "/ops/supply"), ops_supply),
+    (("GET", "/ops/roster"), ops_roster),
+    (("POST", "/ops/roster"), ops_roster_add),
+    (("POST", "/ops/roster/{id}/status"), ops_roster_status),
+    (("DELETE", "/ops/roster/{id}"), ops_roster_delete),
     (("GET", "/ops/leads"), ops_leads),
     (("POST", "/ops/leads/{id}/status"), ops_lead_status),
     (("POST", "/ops/contracts/template"), ops_set_contract),

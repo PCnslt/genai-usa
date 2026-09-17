@@ -142,6 +142,16 @@ Resources:
       KeySchema:
         - { AttributeName: lead_id, KeyType: HASH }
 
+  RosterTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: genai-roster
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - { AttributeName: contractor_id, AttributeType: S }
+      KeySchema:
+        - { AttributeName: contractor_id, KeyType: HASH }
+
   # ============ Cognito (auth + roles) ============
   UserPool:
     Type: AWS::Cognito::UserPool
@@ -276,6 +286,7 @@ Resources:
           TABLE_SUPPORT: genai-conversations
           TABLE_META: genai-meta
           TABLE_LEADS: genai-leads
+          TABLE_ROSTER: genai-roster
 
   # ============ API Gateway (HTTP API) ============
   HttpApi:

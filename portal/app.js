@@ -443,10 +443,30 @@ function renderOpsLeads(list) {
     }));
 }
 
-function renderSupply(data) {
+let SUPPLY_ROLES = {};
+
+function renderSupply(data, roster) {
   const box = el("opsSupplyBox");
   box.innerHTML = "";
   const roles = data.roles || {};
+  SUPPLY_ROLES = roles;
+  // populate the role dropdown for the add form
+  const sel = el("roRole");
+  if (sel) {
+    sel.innerHTML = "";
+    Object.entries(roles).forEach(([k, r]) => {
+      const o = document.createElement("option");
+      o.value = k;
+      o.textContent = r.title;
+      sel.appendChild(o);
+    });
+  }
+  // coverage: count roster by role + status
+  const coverage = {};
+  (roster || []).forEach((c) => {
+    coverage[c.role] = coverage[c.role] || { hired: 0, assigned: 0, interviewing: 0 };
+    if (coverage[c.role][c.status] != null) coverage[c.role][c.status]++;
+  });
   (data.supply || []).forEach((g) => {
     const sec = document.createElement("div");
     sec.className = "supply-sec";
@@ -460,7 +480,15 @@ function renderSupply(data) {
       const roleHtml = (it.roles || []).map((rk) => {
         const r = roles[rk] || {};
         const cost = (r.fiverr && r.fiverr !== "—") ? r.fiverr : (r.upwork || "");
-        return `<span class="supply-role"><b>${esc(r.title || rk)}</b><span>${esc(r.gig || "")}</span><span class="cost">${esc(cost)}</span></span>`;
+        const cov = coverage[rk];
+        const parts = [];
+        if (cov) {
+          if (cov.hired) parts.push(cov.hired + " hired");
+          if (cov.assigned) parts.push(cov.assigned + " assigned");
+          if (cov.interviewing) parts.push(cov.interviewing + " interviewing");
+        }
+        const covHtml = parts.length ? `<span class="cov">${parts.join(" · ")}</span>` : "";
+        return `<span class="supply-role"><b>${esc(r.title || rk)}</b><span>${esc(r.gig || "")}</span><span class="cost">${esc(cost)}</span>${covHtml}</span>`;
       }).join("");
       row.innerHTML =
         `<div class="supply-item"><b>${esc(it.name)}</b><span class="sell">${esc(it.sell || "")}</span></div>` +
@@ -470,6 +498,58 @@ function renderSupply(data) {
     box.appendChild(sec);
   });
 }
+
+function renderRoster(roster) {
+  const box = el("opsRosterBox");
+  box.innerHTML = "";
+  if (!roster || !roster.length) {
+    box.innerHTML = '<p class="muted small">No contractors yet — add one above, then advance it from interviewing → hired → assigned.</p>';
+    return;
+  }
+  const flow = ["interviewing", "hired", "assigned"];
+  roster.forEach((c) => {
+    const cur = c.status || "interviewing";
+    const i = flow.indexOf(cur);
+    const next = flow[Math.min(i + 1, flow.length - 1)];
+    const roleTitle = (SUPPLY_ROLES[c.role] || {}).title || c.role;
+    const d = document.createElement("div");
+    d.className = "roster-row";
+    d.innerHTML =
+      `<div class="roster-main"><b>${esc(c.name)}</b><span class="muted small">${esc(roleTitle)} · ${esc(c.platform)} · ${esc(c.price)}${c.notes ? " · " + esc(c.notes) : ""}</span></div>` +
+      `<div class="roster-side"><span class="st st-${cur}">${esc(cur)}</span>` +
+      (next !== cur ? `<button class="btn ghost small" data-rid="${esc(c.contractor_id)}" data-next="${next}">→ ${next}</button>` : "") +
+      `<button class="btn ghost small" data-rdel="${esc(c.contractor_id)}">×</button></div>`;
+    box.appendChild(d);
+  });
+  box.querySelectorAll("[data-rid]").forEach((b) =>
+    b.addEventListener("click", async () => {
+      await api(`/ops/roster/${b.dataset.rid}/status`, { method: "POST", body: JSON.stringify({ status: b.dataset.next }) });
+      refreshSupply();
+    }));
+  box.querySelectorAll("[data-rdel]").forEach((b) =>
+    b.addEventListener("click", async () => {
+      await api(`/ops/roster/${b.dataset.rdel}`, { method: "DELETE" });
+      refreshSupply();
+    }));
+}
+
+async function refreshSupply() {
+  const [sup, roster] = await Promise.all([api("/ops/supply"), api("/ops/roster")]);
+  renderSupply(sup, roster);
+  renderRoster(roster);
+}
+
+el("roAdd").addEventListener("click", async () => {
+  const name = el("roName").value.trim();
+  const role = el("roRole").value;
+  if (!name || !role) { alert("name and role required"); return; }
+  await api("/ops/roster", { method: "POST", body: JSON.stringify({
+    name, role, platform: el("roPlatform").value.trim(),
+    price: el("roPrice").value.trim(), notes: el("roNotes").value.trim(),
+  }) });
+  ["roName", "roPlatform", "roPrice", "roNotes"].forEach((id) => (el(id).value = ""));
+  refreshSupply();
+});
 
 async function loadOps() {
   if (role === "contractor") {
@@ -489,7 +569,7 @@ async function loadOps() {
   renderOpsFinance(finance);
   renderOpsLeads(leads);
   if (role === "admin") {
-    renderSupply(await api("/ops/supply"));
+    await refreshSupply();
   }
 }
 

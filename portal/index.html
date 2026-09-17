@@ -200,7 +200,17 @@
 
     <section class="card panel" id="opsSupply" style="display:none">
       <h2>Supply &amp; Hiring</h2>
-      <p class="muted small">Who to hire (Fiverr/Upwork) for each service, product, and plan — with going contractor prices. Sell prices are set 3–20× above cost.</p>
+      <p class="muted small">Who to hire for each line, plus your contractor roster — track interviewing → hired → assigned.</p>
+      <div class="roster-add">
+        <input id="roName" placeholder="Contractor name">
+        <select id="roRole"></select>
+        <input id="roPlatform" placeholder="Fiverr / Upwork">
+        <input id="roPrice" placeholder="Price (e.g. $150)">
+        <input id="roNotes" placeholder="Notes (optional)">
+        <button id="roAdd" class="btn small">Add</button>
+      </div>
+      <div id="opsRosterBox" class="roster"></div>
+      <div class="supply-cat" style="margin-top:20px">Supply map</div>
       <div id="opsSupplyBox" class="supply"></div>
     </section>
 
