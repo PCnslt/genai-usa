@@ -6,59 +6,50 @@ the initial seed AND the fallback when the table is empty.
 
 Positioning rule: we NEVER say who we cater to. Services are organized purely
 by AI service category (`category` field). No industry verticals.
+
+Two kinds of buyable things:
+  - `product` — ONE-TIME purchase, "buy once, own forever" (build-and-handover
+    or a one-time deliverable). No monthly subscription.
+  - `service` — managed/done-for-you work (we build AND run it; many carry a
+    monthly component).
+  - `plan` — monthly retainer.
 """
 from __future__ import annotations
 
 CATALOG = [
-    # ---- high-value AI products (productized, fixed-scope packages) ----
-    dict(product_id="ai-chatbot-launch", name="AI Chatbot Launch Package", kind="product",
+    # ---- one-time products (buy once, own forever — no subscription) ----
+    dict(product_id="website-ai-chatbot", name="Website AI Chatbot", kind="product",
          category="Chat & Phone",
-         price_cents=250000, monthly_cents=50000, recurring=True,
-         description="A custom website chatbot trained on your business, live in 7 days. Includes five knowledge pages, twenty intents, lead capture, and one month of tuning — grounded, on-brand, and always on."),
-    dict(product_id="voice-agent-launch", name="AI Voice Agent — 48-Hour Launch", kind="product",
-         category="Chat & Phone",
-         price_cents=300000, monthly_cents=50000, recurring=True,
-         description="An AI phone agent that answers every call on the first ring, books appointments, takes messages, and routes urgent calls — live in 48 hours, with call transcripts and CRM logging included."),
-    dict(product_id="rag-copilot", name="Private RAG Copilot", kind="product",
+         price_cents=250000, monthly_cents=0, recurring=False,
+         description="An AI assistant added to your website that answers visitor questions and captures names and emails — built and handed over so you own it and host it on your own site. No subscription; it keeps working forever."),
+    dict(product_id="ask-my-docs", name="Ask My Docs AI Assistant", kind="product",
          category="Operations & Admin",
-         price_cents=400000, monthly_cents=75000, recurring=True,
-         description="Your documents, policies, and proprietary data turned into a private, cited Q&A assistant for your whole team — instant, sourced answers instead of digging through a shared drive."),
-    dict(product_id="outbound-sdr-engine", name="AI Outbound SDR Engine", kind="product",
-         category="Sales & Leads",
-         price_cents=500000, monthly_cents=150000, recurring=True,
-         description="An autonomous prospecting agent that builds and enriches lists, writes personalized multi-channel sequences, and books meetings — a predictable pipeline without hiring a single rep."),
-    dict(product_id="content-publishing-pack", name="AI Content Publishing Package", kind="product",
-         category="Content & Design",
-         price_cents=200000, monthly_cents=75000, recurring=True,
-         description="Eight SEO-optimized articles plus a newsletter every month — researched, drafted, and edited in your voice, published on a schedule, ready to rank."),
-    dict(product_id="social-publishing-pack", name="AI Social Publishing Package", kind="product",
-         category="Content & Design",
-         price_cents=150000, monthly_cents=50000, recurring=True,
-         description="Thirty brand-consistent posts and short-form scripts a month — planned, written, and scheduled across every platform you care about."),
-    dict(product_id="seo-foundation-pack", name="AI SEO Foundation Package", kind="product",
-         category="Marketing & Ads",
-         price_cents=250000, monthly_cents=100000, recurring=True,
-         description="Technical SEO audit, entity and schema optimization, and a monthly content pipeline that compounds — climbing you up both traditional and AI-search rankings."),
-    dict(product_id="email-revenue-system", name="AI Email Revenue System", kind="product",
-         category="Marketing & Ads",
-         price_cents=250000, monthly_cents=75000, recurring=True,
-         description="AI-written sequences, segmentation, and lifecycle flows with deliverability setup (SPF/DKIM/DMARC and warmup) — your list turns into revenue on autopilot."),
-    dict(product_id="document-automation-pipeline", name="Document Automation Pipeline", kind="product",
+         price_cents=350000, monthly_cents=0, recurring=False,
+         description="A private AI assistant trained on your documents, manuals, and policies that answers questions in plain language with citations — deployed in your own environment. Yours to keep, no ongoing fee."),
+    dict(product_id="workflow-automation-setup", name="Workflow Automation Setup", kind="product",
          category="Operations & Admin",
-         price_cents=350000, monthly_cents=75000, recurring=True,
-         description="A pipeline that ingests invoices, contracts, and forms — extracts structured fields with OCR + AI, validates, and exports to your systems. No more manual data entry."),
-    dict(product_id="workflow-automation-pack", name="Workflow Automation Pack", kind="product",
-         category="Operations & Admin",
-         price_cents=300000, monthly_cents=75000, recurring=True,
-         description="Your SaaS tools connected with AI steps that handle routing, enrichment, and reporting — repetitive back-office processes running hands-free."),
-    dict(product_id="bi-copilot-dashboard", name="BI Copilot Dashboard", kind="product",
-         category="Data & Reports",
-         price_cents=500000, monthly_cents=100000, recurring=True,
-         description="A natural-language BI copilot over your live data — ask questions in plain English and get charts, forecasts, and anomaly alerts, with scheduled reports. No analyst required."),
+         price_cents=250000, monthly_cents=0, recurring=False,
+         description="Automations that connect your existing tools so repetitive jobs run themselves — built inside your own n8n, Make, or Zapier account, so you own and control them forever."),
+    dict(product_id="custom-fine-tuned-model", name="Custom Fine-Tuned AI Model", kind="product",
+         category="Custom Builds",
+         price_cents=400000, monthly_cents=0, recurring=False,
+         description="A model trained on your data, voice, and tasks — delivered with the trained files and a run guide. You own the model outright and run it yourself, no subscription."),
     dict(product_id="avatar-video-pack", name="AI Avatar Video Pack", kind="product",
          category="Content & Design",
          price_cents=150000, monthly_cents=0, recurring=False,
-         description="Five photorealistic AI-avatar videos — UGC-style ads or spokesperson explainers — produced from script to finished talking-head, with no filming, crew, or editing backlog."),
+         description="A set of finished, ready-to-post videos featuring an AI spokesperson — explainers, ads, or onboarding. Delivered as video files you own and reuse forever, no re-licensing fee."),
+    dict(product_id="seo-content-pack", name="AI SEO Content Pack", kind="product",
+         category="Marketing & Ads",
+         price_cents=200000, monthly_cents=0, recurring=False,
+         description="Ten publish-ready, keyword-optimized articles written and edited for you — delivered as files you own and publish on your own site. You keep every article forever."),
+    dict(product_id="seo-audit-roadmap", name="AI SEO Audit + Roadmap", kind="product",
+         category="Marketing & Ads",
+         price_cents=100000, monthly_cents=0, recurring=False,
+         description="A one-time deep review of your site's search performance plus a prioritized fix-it roadmap — a report you keep and can implement yourself or hand to anyone."),
+    dict(product_id="brand-identity-kit", name="AI Brand Identity Kit", kind="product",
+         category="Content & Design",
+         price_cents=250000, monthly_cents=0, recurring=False,
+         description="A complete visual identity — logo, color palette, typography, and a style guide — delivered as files you own outright. One-time, no license or subscription."),
 
     # ---- Chat & Phone ----
     dict(product_id="ai-chatbot", name="Custom AI Chatbot", kind="service",
@@ -73,7 +64,7 @@ CATALOG = [
          category="Chat & Phone",
          price_cents=200000, monthly_cents=40000, recurring=True,
          description="Resolves repeat customer questions across chat and email by reading your knowledge base — escalating only the cases that genuinely need a human."),
-    dict(product_id="outbound-ai-calling", name="Outbound AI Calling", kind="service",
+    dict(product_id="outbound-ai-calling", name="AI That Makes Your Calls", kind="service",
          category="Chat & Phone",
          price_cents=250000, monthly_cents=50000, recurring=True,
          description="An AI agent that makes confirmation, reminder, and follow-up calls at scale, updates your records automatically, and never needs a break."),
