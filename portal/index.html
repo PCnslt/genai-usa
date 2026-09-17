@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Portal — Generative Artificial Intelligence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="grain"></div>
+<div id="glow"></div>
+
+<header class="topbar">
+  <div class="brand">Generative <span>AI</span></div>
+  <div class="top-right">
+    <span id="whoami" class="muted"></span>
+    <a href="/" class="btn ghost">← Site</a>
+    <button id="logout" class="btn ghost">Sign out</button>
+  </div>
+</header>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div class="side-head">
+      <h2>My purchases</h2>
+      <span id="roleBadge" class="role muted">customer</span>
+    </div>
+    <ul id="entitlements" class="ents"></ul>
+  </aside>
+
+  <main class="content">
+    <section class="card">
+      <h2>Assistant</h2>
+      <p class="muted small">Ask about your purchase, our services, or your plan — the assistant knows what you bought.</p>
+      <div id="chatlog" class="chatlog"></div>
+      <form id="chatform" class="chatform">
+        <input id="chatinput" placeholder="e.g. What did I buy? How do I get my chatbot?" autocomplete="off">
+        <button class="btn" type="submit">Send</button>
+      </form>
+    </section>
+
+    <section class="card">
+      <h2>Billing</h2>
+      <p id="billing" class="muted">Loading…</p>
+      <a id="portalLink" class="btn ghost" href="#" target="_blank" rel="noopener" style="display:none">Manage billing</a>
+    </section>
+
+    <section class="card">
+      <h2>Orders</h2>
+      <ul id="orders" class="orders"></ul>
+    </section>
+  </main>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
