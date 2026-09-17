@@ -27,6 +27,18 @@ INTERNAL_DOCS = [
      "Customers message us inside their portal (Support tab). Reply in the Ops "
      "console Support inbox. Resolve threads when done. Every retainer includes "
      "a 24/7 hotline with a real human on the line."),
+    ("Sales process",
+     "Every inbound lead (contact form or chatbot) lands in the Ops console "
+     "Leads panel. Respond within 24 hours, qualify against our catalog, send a "
+     "fixed-scope quote, and move the lead from new to contacted to qualified. "
+     "When they pay, the checkout creates their account and the order becomes "
+     "an entitlement automatically."),
+    ("Contractor onboarding",
+     "Hire a contractor by adding them in the Supply & Hiring roster, then "
+     "invite them via the Users panel (contractors group) so they get a portal "
+     "login. They only ever see the support inbox and clients as Client #XXXX — "
+     "never a real customer identity. Assign them to a job by flipping their "
+     "roster status to assigned."),
     ("Stack",
      "We run on AWS: Cognito (auth), Lambda + API Gateway (backend), DynamoDB "
      "(data), S3 + CloudFront (site + portal). The payment layer is swappable "

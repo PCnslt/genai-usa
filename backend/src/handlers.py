@@ -716,6 +716,32 @@ def ops_finance(event):
     return _ok(db.finance_summary())
 
 
+def ops_analytics(event):
+    """Internal business dashboard — we dogfood our own 'Analytics' product."""
+    _require_admin(event)
+    from collections import Counter
+    finance = db.finance_summary()
+    orders = db.list_all_orders()
+    leads = db.list_leads()
+    contractors = db.list_contractors()
+    support_open = len(db.list_open_support())
+    products = db.list_products() or CATALOG
+    return _ok({
+        "revenue_cents": finance["total_revenue_cents"],
+        "charges": finance["total_charges"],
+        "by_provider_cents": finance["by_provider_cents"],
+        "orders": {"total": len(orders),
+                   "by_status": dict(Counter(o.get("status", "pending") for o in orders)),
+                   "by_fulfillment": dict(Counter(o.get("fulfillment_status", "pending") for o in orders))},
+        "leads": {"total": len(leads),
+                  "by_status": dict(Counter(l.get("status", "new") for l in leads))},
+        "contractors": {"total": len(contractors),
+                        "by_status": dict(Counter(c.get("status", "interviewing") for c in contractors))},
+        "support_open": support_open,
+        "products": len(products),
+    })
+
+
 def ops_supply(event):
     _require_admin(event)
     return _ok({"roles": supply.ROLES, "supply": supply.SUPPLY})
@@ -821,6 +847,7 @@ _ROUTES = [
     (("POST", "/ops/users"), ops_invite_user),
     (("POST", "/ops/users/{username}/role"), ops_set_role),
     (("GET", "/ops/finance"), ops_finance),
+    (("GET", "/ops/analytics"), ops_analytics),
     (("GET", "/ops/supply"), ops_supply),
     (("GET", "/ops/roster"), ops_roster),
     (("POST", "/ops/roster"), ops_roster_add),

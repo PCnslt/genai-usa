@@ -443,6 +443,26 @@ function renderOpsLeads(list) {
     }));
 }
 
+function renderAnalytics(a) {
+  const box = el("opsAnalyticsBox");
+  box.innerHTML = "";
+  const card = (num, lbl) => `<div class="an-card"><div class="an-num">${num}</div><div class="an-lbl">${lbl}</div></div>`;
+  const byStatus = (obj) => Object.entries(obj || {}).map(([k, v]) => `${esc(k)}: ${v}`).join(" · ") || "—";
+  box.innerHTML =
+    `<div class="an-grid">
+      ${card(money(a.revenue_cents), "Revenue")}
+      ${card(a.charges, "Charges")}
+      ${card(a.orders.total, "Orders")}
+      ${card(a.leads.total, "Leads")}
+      ${card(a.contractors.total, "Contractors")}
+      ${card(a.support_open, "Open tickets")}
+    </div>
+    <div class="an-sec"><h3>Orders</h3><div class="muted small">${byStatus(a.orders.by_status)} · fulfillment: ${byStatus(a.orders.by_fulfillment)}</div></div>
+    <div class="an-sec"><h3>Leads</h3><div class="muted small">${byStatus(a.leads.by_status)}</div></div>
+    <div class="an-sec"><h3>Contractors</h3><div class="muted small">${byStatus(a.contractors.by_status)}</div></div>
+    <div class="an-sec"><h3>Revenue by provider</h3><div class="muted small">${Object.entries(a.by_provider_cents || {}).map(([k, v]) => `${esc(k)}: ${money(v)}`).join(" · ") || "—"}</div></div>`;
+}
+
 let SUPPLY_ROLES = {};
 
 function renderSupply(data, roster) {
@@ -569,6 +589,7 @@ async function loadOps() {
   renderOpsFinance(finance);
   renderOpsLeads(leads);
   if (role === "admin") {
+    renderAnalytics(await api("/ops/analytics"));
     await refreshSupply();
   }
 }

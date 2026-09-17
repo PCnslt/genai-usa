@@ -181,7 +181,15 @@ a { color: inherit; text-decoration: none; }
 .st-interviewing { background: rgba(155,92,255,.15); color: #c9b3ff; }
 .st-hired { background: rgba(79,124,255,.18); color: #a8c2ff; }
 .st-assigned { background: rgba(46,204,113,.16); color: #7fe0a8; }
+/* analytics dashboard */
+.an-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.an-card { border: 1px solid var(--line); border-radius: 12px; padding: 16px; background: rgba(79,124,255,.05); }
+.an-num { font-size: 26px; font-weight: 400; }
+.an-lbl { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-top: 4px; }
+.an-sec { margin-top: 16px; }
+.an-sec h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: 4px; }
 @media (max-width: 760px) {
   .supply-row { grid-template-columns: 1fr; }
   .roster-row { flex-direction: column; align-items: flex-start; }
+  .an-grid { grid-template-columns: 1fr 1fr; }
 }

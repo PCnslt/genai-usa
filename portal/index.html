@@ -128,6 +128,7 @@
     <div class="side-head"><h2>Operations</h2></div>
     <ul class="opsnav" id="opsNav">
       <li data-panel="opsOrders" class="active employeeOnly">Orders</li>
+      <li data-panel="opsAnalytics" class="adminOnly">Analytics</li>
       <li data-panel="opsLeads" class="employeeOnly">Leads</li>
       <li data-panel="opsSupport">Support inbox</li>
       <li data-panel="opsContracts" class="employeeOnly">Contracts</li>
@@ -196,6 +197,12 @@
     <section class="card panel" id="opsFinance" style="display:none">
       <h2>Finance</h2>
       <div id="opsFinanceBox" class="muted"></div>
+    </section>
+
+    <section class="card panel" id="opsAnalytics" style="display:none">
+      <h2>Analytics</h2>
+      <p class="muted small">Our own business, on our own dashboard.</p>
+      <div id="opsAnalyticsBox" class="analytics"></div>
     </section>
 
     <section class="card panel" id="opsSupply" style="display:none">
