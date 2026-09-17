@@ -128,7 +128,18 @@
 
     <section class="card panel" id="opsUsers" style="display:none">
       <h2>Users</h2>
-      <p class="muted small">Assign roles (customers / employees / admins).</p>
+      <p class="muted small">Invite a contractor/employee/admin by email (password shown once), or assign a role below.</p>
+      <form id="inviteForm" class="productform">
+        <input id="invEmail" placeholder="email@example.com" autocomplete="off">
+        <select id="invRole">
+          <option value="contractors">contractor</option>
+          <option value="employees">employee</option>
+          <option value="customers">customer</option>
+          <option value="admins">admin</option>
+        </select>
+        <button class="btn" type="submit">Invite</button>
+      </form>
+      <div id="inviteResult" class="muted small" style="margin-bottom:12px"></div>
       <div id="opsUsersList" class="opslist"></div>
     </section>
 

@@ -359,6 +359,7 @@ function renderOpsUsers(list) {
     d.innerHTML =
       `<div class="ops-main"><b>${esc(u.email || u.username)}</b><span class="muted small">${esc(u.username)} · ${esc(u.status)}</span></div>` +
       `<div class="ops-side">
+        <button class="btn ghost small" data-role="${esc(u.username)}" data-g="contractors">+ contractor</button>
         <button class="btn ghost small" data-role="${esc(u.username)}" data-g="employees">+ employee</button>
         <button class="btn ghost small" data-role="${esc(u.username)}" data-g="admins">+ admin</button>
         <button class="btn ghost small" data-role="${esc(u.username)}" data-g="customers">+ customer</button>
@@ -484,6 +485,18 @@ el("productForm").addEventListener("submit", async (e) => {
   if (!body.product_id || !body.name) { alert("product_id and name required"); return; }
   await api("/ops/products", { method: "POST", body: JSON.stringify(body) });
   ["pfId", "pfName", "pfPrice", "pfMonthly"].forEach((id) => (el(id).value = ""));
+  loadOps();
+});
+
+el("inviteForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const email = el("invEmail").value.trim();
+  const role = el("invRole").value;
+  if (!email) { alert("Enter an email."); return; }
+  const r = await api("/ops/users", { method: "POST", body: JSON.stringify({ email, role }) });
+  if (r.error) { el("inviteResult").textContent = "Error: " + r.error; return; }
+  el("inviteResult").innerHTML = `<b>${esc(r.email)}</b> (${esc(r.role)}) — password: <b>${esc(r.password)}</b>`;
+  el("invEmail").value = "";
   loadOps();
 });
 

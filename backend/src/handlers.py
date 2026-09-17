@@ -522,6 +522,47 @@ def ops_users(event):
     return _ok({"users": users})
 
 
+def _gen_password() -> str:
+    import secrets
+    import string
+    upper = secrets.choice(string.ascii_uppercase)
+    lower = secrets.choice(string.ascii_lowercase)
+    digit = secrets.choice(string.digits)
+    special = secrets.choice("!@#$%")
+    rest = "".join(secrets.choice(string.ascii_letters + string.digits) for _ in range(10))
+    pwd = list(upper + lower + digit + special + rest)
+    secrets.SystemRandom().shuffle(pwd)
+    return "".join(pwd)
+
+
+def ops_invite_user(event):
+    """Admin: create a user (e.g. a Fiverr contractor) with a generated password."""
+    _require_admin(event)
+    b = _body(event)
+    email = (b.get("email") or "").strip().lower()
+    role = b.get("role", "contractors")
+    if "@" not in email:
+        return _err("valid email required")
+    if role not in ("customers", "employees", "contractors", "admins"):
+        return _err("role must be customers|employees|contractors|admins")
+    import boto3
+    cidp = boto3.client("cognito-idp")
+    pool = os.environ.get("USER_POOL_ID")
+    if not pool:
+        return _err("USER_POOL_ID not configured", 500)
+    pwd = _gen_password()
+    try:
+        cidp.admin_create_user(
+            UserPoolId=pool, Username=email, MessageAction="SUPPRESS",
+            UserAttributes=[{"Name": "email", "Value": email},
+                            {"Name": "email_verified", "Value": "true"}])
+    except Exception:
+        pass  # already exists -> reset password below
+    cidp.admin_set_user_password(UserPoolId=pool, Username=email, Password=pwd, Permanent=True)
+    cidp.admin_add_user_to_group(UserPoolId=pool, Username=email, GroupName=role)
+    return _ok({"email": email, "role": role, "password": pwd, "created": True})
+
+
 def ops_set_role(event, params):
     _require_admin(event)
     b = _body(event)
@@ -606,6 +647,7 @@ _ROUTES = [
     (("POST", "/ops/products"), ops_upsert_product),
     (("DELETE", "/ops/products/{id}"), ops_delete_product),
     (("GET", "/ops/users"), ops_users),
+    (("POST", "/ops/users"), ops_invite_user),
     (("POST", "/ops/users/{username}/role"), ops_set_role),
     (("GET", "/ops/finance"), ops_finance),
     (("POST", "/ops/contracts/template"), ops_set_contract),
