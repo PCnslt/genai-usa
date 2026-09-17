@@ -443,6 +443,34 @@ function renderOpsLeads(list) {
     }));
 }
 
+function renderSupply(data) {
+  const box = el("opsSupplyBox");
+  box.innerHTML = "";
+  const roles = data.roles || {};
+  (data.supply || []).forEach((g) => {
+    const sec = document.createElement("div");
+    sec.className = "supply-sec";
+    const head = document.createElement("div");
+    head.className = "supply-cat";
+    head.textContent = g.category;
+    sec.appendChild(head);
+    (g.items || []).forEach((it) => {
+      const row = document.createElement("div");
+      row.className = "supply-row";
+      const roleHtml = (it.roles || []).map((rk) => {
+        const r = roles[rk] || {};
+        const cost = (r.fiverr && r.fiverr !== "—") ? r.fiverr : (r.upwork || "");
+        return `<span class="supply-role"><b>${esc(r.title || rk)}</b><span>${esc(r.gig || "")}</span><span class="cost">${esc(cost)}</span></span>`;
+      }).join("");
+      row.innerHTML =
+        `<div class="supply-item"><b>${esc(it.name)}</b><span class="sell">${esc(it.sell || "")}</span></div>` +
+        `<div class="supply-roles">${roleHtml}</div>`;
+      sec.appendChild(row);
+    });
+    box.appendChild(sec);
+  });
+}
+
 async function loadOps() {
   if (role === "contractor") {
     const support = await api("/ops/support");
@@ -460,6 +488,9 @@ async function loadOps() {
   renderOpsUsers(users.users || []);
   renderOpsFinance(finance);
   renderOpsLeads(leads);
+  if (role === "admin") {
+    renderSupply(await api("/ops/supply"));
+  }
 }
 
 /* ---- view switching ---- */

@@ -46,6 +46,7 @@ import company
 import db
 import identity
 import marketing
+import supply
 import terms
 from payments import get_provider, Order
 from products import CATALOG, by_id as catalog_by_id
@@ -715,6 +716,11 @@ def ops_finance(event):
     return _ok(db.finance_summary())
 
 
+def ops_supply(event):
+    _require_admin(event)
+    return _ok({"roles": supply.ROLES, "supply": supply.SUPPLY})
+
+
 def ops_set_contract(event):
     _require_admin(event)
     b = _body(event)
@@ -783,6 +789,7 @@ _ROUTES = [
     (("POST", "/ops/users"), ops_invite_user),
     (("POST", "/ops/users/{username}/role"), ops_set_role),
     (("GET", "/ops/finance"), ops_finance),
+    (("GET", "/ops/supply"), ops_supply),
     (("GET", "/ops/leads"), ops_leads),
     (("POST", "/ops/leads/{id}/status"), ops_lead_status),
     (("POST", "/ops/contracts/template"), ops_set_contract),

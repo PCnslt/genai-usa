@@ -153,3 +153,19 @@ a { color: inherit; text-decoration: none; }
   .co-product { position: static; }
   .co-grid, .co-grid2 { grid-template-columns: 1fr; }
 }
+
+/* ---- supply & hiring map (admin) ---- */
+.supply { display: flex; flex-direction: column; gap: 18px; }
+.supply-cat { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); border-bottom: 1px solid var(--line); padding-bottom: 6px; margin-bottom: 4px; }
+.supply-row { display: grid; grid-template-columns: 230px 1fr; gap: 12px; padding: 7px 0; border-bottom: 1px solid rgba(155,92,255,.12); align-items: start; }
+.supply-item { display: flex; flex-direction: column; gap: 2px; }
+.supply-item b { font-weight: 500; font-size: 14px; }
+.supply-item .sell { font-size: 12px; color: var(--blue); }
+.supply-roles { display: flex; flex-wrap: wrap; gap: 6px; }
+.supply-role { display: flex; flex-direction: column; gap: 1px; background: rgba(79,124,255,.08); border: 1px solid rgba(79,124,255,.25); border-radius: 8px; padding: 5px 9px; font-size: 12px; line-height: 1.35; }
+.supply-role b { font-weight: 500; }
+.supply-role span { color: var(--muted); font-size: 11px; }
+.supply-role .cost { color: var(--ink); }
+@media (max-width: 760px) {
+  .supply-row { grid-template-columns: 1fr; }
+}
