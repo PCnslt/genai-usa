@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Generative Artificial Intelligence</title>
+<meta name="description" content="Generative AI for your business — chatbots, agents, content and automation. Fixed-price, delivered by experts.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #000000;
+    --ink: #ffffff;
+    --muted: #6f6f6f;
+    --line: rgba(111,111,111,.35);
+    --btn: #4d4d4d;
+    --ease: cubic-bezier(.25,.1,.25,1);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg); color: var(--ink);
+    font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-weight: 400; line-height: 1.5; -webkit-font-smoothing: antialiased; overflow-x: hidden;
+  }
+  a { color: inherit; text-decoration: none; }
+  .wrap { max-width: 900px; margin: 0 auto; padding: 0 28px; }
+
+  .grain { position: fixed; inset: 0; z-index: 50; pointer-events: none; opacity: .05;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+  #glow { position: fixed; top: 0; left: 0; width: 520px; height: 520px; margin: -260px 0 0 -260px; border-radius: 50%;
+    pointer-events: none; z-index: 1; background: radial-gradient(circle, rgba(255,255,255,.07), transparent 60%); will-change: transform; }
+
+  /* ---- nav ---- */
+  nav { position: fixed; top: 0; left: 0; right: 0; z-index: 60; }
+  .nav-in { display: flex; align-items: center; justify-content: space-between; padding: 26px 32px; }
+  .logo { font-size: 13px; font-weight: 500; letter-spacing: .22em; text-transform: uppercase; color: var(--ink); }
+  .nav-in .links { display: flex; gap: 30px; }
+  .nav-in .links a { color: var(--muted); font-size: 13px; letter-spacing: .03em; transition: color .22s var(--ease); }
+  .nav-in .links a:hover { color: var(--ink); }
+
+  /* ---- hero ---- */
+  .hero { position: relative; min-height: 100svh; display: flex; align-items: center; justify-content: center; text-align: center; overflow: hidden; }
+  .hero-media { position: absolute; inset: 0; overflow: hidden; }
+  .hero-media video { width: 100%; height: 100%; object-fit: cover; filter: grayscale(1) brightness(.38) contrast(1.15); transform: scale(1.08); will-change: transform; }
+  .hero::after { content: ""; position: absolute; inset: 0; background: radial-gradient(ellipse at center, rgba(0,0,0,.18) 0%, rgba(0,0,0,.72) 100%); }
+  .hero-content { position: relative; z-index: 2; padding: 0 24px; }
+  .hero .brand { font-size: 12px; letter-spacing: .3em; text-transform: uppercase; color: var(--muted); margin-bottom: 34px; }
+  .hero h1 { font-size: clamp(44px, 9vw, 96px); font-weight: 300; letter-spacing: -0.02em; line-height: 1.02; }
+  .hero h1 em { font-style: normal; color: var(--muted); }
+  .hero p { color: var(--muted); font-size: 17px; font-weight: 300; max-width: 460px; margin: 26px auto 40px; }
+  .btn { display: inline-block; padding: 15px 34px; border-radius: 10px; background: var(--btn); color: var(--ink); font-size: 14px; font-weight: 400; letter-spacing: .04em; border: none; cursor: pointer; transition: background .3s var(--ease), transform .3s var(--ease); }
+  .btn:hover { background: #636363; }
+  .scroll-hint { position: absolute; bottom: 34px; left: 50%; transform: translateX(-50%); z-index: 2; color: var(--muted); font-size: 11px; letter-spacing: .25em; text-transform: uppercase; animation: bob 2.4s ease-in-out infinite; }
+  @keyframes bob { 50% { transform: translateX(-50%) translateY(6px); } }
+
+  /* ---- manifesto ---- */
+  .manifesto { padding: 140px 0; }
+  .statement { min-height: 56vh; display: flex; align-items: center; justify-content: center; text-align: center; padding: 60px 24px; }
+  .statement h2 { font-size: clamp(28px, 5vw, 52px); font-weight: 300; letter-spacing: -0.015em; line-height: 1.18; max-width: 780px; margin: 0 auto; }
+  .statement h2 em { font-style: normal; color: var(--muted); }
+  .statement .kicker { font-size: 12px; letter-spacing: .25em; text-transform: uppercase; color: var(--muted); margin-bottom: 26px; }
+
+  /* ---- services ---- */
+  .services { padding: 100px 0; }
+  .services .rule { border-top: 1px solid var(--line); }
+  .svc { padding: 46px 0; display: grid; grid-template-columns: 1fr 1.2fr; gap: 30px; align-items: baseline; }
+  .svc .num { color: var(--muted); font-size: 13px; letter-spacing: .1em; }
+  .svc h3 { font-size: 26px; font-weight: 400; letter-spacing: -0.01em; }
+  .svc p { color: var(--muted); font-size: 15px; font-weight: 300; line-height: 1.6; }
+  .svc .items { color: var(--muted); font-size: 14px; font-weight: 300; }
+
+  /* ---- process ---- */
+  .process { padding: 100px 0; }
+  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; margin-top: 60px; }
+  .step .n { color: var(--muted); font-size: 13px; letter-spacing: .1em; margin-bottom: 18px; }
+  .step h4 { font-size: 18px; font-weight: 400; margin-bottom: 12px; }
+  .step p { color: var(--muted); font-size: 14px; font-weight: 300; }
+
+  /* ---- cta ---- */
+  .cta { padding: 160px 0; text-align: center; }
+  .cta h2 { font-size: clamp(32px, 5.5vw, 56px); font-weight: 300; letter-spacing: -0.02em; line-height: 1.1; }
+  .cta p { color: var(--muted); font-size: 16px; font-weight: 300; margin: 22px auto 38px; max-width: 420px; }
+
+  footer { border-top: 1px solid var(--line); padding: 40px 32px; display: flex; justify-content: space-between; align-items: center; gap: 16px; color: var(--muted); font-size: 12px; letter-spacing: .04em; flex-wrap: wrap; }
+
+  .reveal { opacity: 0; transform: translateY(34px); transition: opacity 1s var(--ease), transform 1s var(--ease); }
+  .reveal.in { opacity: 1; transform: none; }
+
+  @media (max-width: 720px) {
+    .svc { grid-template-columns: 1fr; gap: 12px; }
+    .steps { grid-template-columns: 1fr; }
+    .nav-in .links { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="grain"></div>
+<div id="glow"></div>
+
+<nav>
+  <div class="nav-in">
+    <div class="logo">Generative Artificial Intelligence</div>
+    <div class="links">
+      <a href="#services">Services</a>
+      <a href="#process">How it works</a>
+      <a href="#contact">Contact</a>
+    </div>
+  </div>
+</nav>
+
+<header class="hero" id="top">
+  <div class="hero-media"><video id="heroVideo" autoplay muted loop playsinline preload="auto"><source src="assets/video/hero.mp4" type="video/mp4"></video></div>
+  <div class="hero-content">
+    <div class="brand">Generative Artificial Intelligence</div>
+    <h1>AI that does <em>the work.</em></h1>
+    <p>Chatbots, agents, content and automation — built for your business, fixed-price, delivered by experts.</p>
+    <a href="#contact" class="btn">Start a project</a>
+  </div>
+  <div class="scroll-hint">Scroll</div>
+</header>
+
+<section class="manifesto">
+  <div class="statement reveal"><div>
+    <div class="kicker">01 — The problem</div>
+    <h2>Your team spends hours on work <em>a machine could do.</em></h2>
+  </div></div>
+  <div class="statement reveal"><div>
+    <div class="kicker">02 — The answer</div>
+    <h2>We build generative AI that <em>takes it off their plate.</em></h2>
+  </div></div>
+  <div class="statement reveal"><div>
+    <div class="kicker">03 — What we make</div>
+    <h2>Chatbots that answer. Agents that automate. <em>Content that ships.</em></h2>
+  </div></div>
+  <div class="statement reveal"><div>
+    <div class="kicker">04 — How we work</div>
+    <h2>Fixed-price. Done for you. <em>By experts.</em></h2>
+  </div></div>
+</section>
+
+<section class="services wrap" id="services">
+  <div class="svc rule reveal"><div class="num">01</div><div><h3>Agents &amp; Automation</h3><p>AI that does the work.</p></div><div class="items">Chatbots &amp; support agents · AI voice agents · Workflow automation · Data &amp; insights</div></div>
+  <div class="svc rule reveal"><div class="num">02</div><div><h3>Content &amp; Creative</h3><p>AI that creates.</p></div><div class="items">AI visuals &amp; branding · Video &amp; motion · Voice &amp; audio · Copy, content &amp; localization</div></div>
+  <div class="svc rule reveal"><div class="num">03</div><div><h3>Strategy &amp; Enablement</h3><p>AI that pays for itself.</p></div><div class="items">AI roadmap &amp; audit · Team training · AI integration</div></div>
+</section>
+
+<section class="process wrap" id="process">
+  <div class="reveal"><div class="kicker" style="font-size:12px;letter-spacing:.25em;text-transform:uppercase;color:var(--muted);">How it works</div></div>
+  <div class="steps">
+    <div class="step reveal"><div class="n">01</div><h4>Tell us the outcome</h4><p>What do you want done? We scope it and lock a fixed price in 24 hours.</p></div>
+    <div class="step reveal"><div class="n">02</div><h4>We build it</h4><p>A vetted specialist builds your deliverable, with milestones and QA.</p></div>
+    <div class="step reveal"><div class="n">03</div><h4>You get it</h4><p>Delivered, documented, ready to use. No surprises.</p></div>
+  </div>
+</section>
+
+<section class="cta" id="contact">
+  <div class="wrap reveal">
+    <h2>Let's build something your customers notice.</h2>
+    <p>Tell us what's eating your team's time — we'll quote it within 24 hours.</p>
+    <a href="mailto:hello@genai-usa.com" class="btn">hello@genai-usa.com</a>
+  </div>
+</section>
+
+<footer>
+  <div>© 2026 Generative Artificial Intelligence</div>
+  <div>AI that does the work.</div>
+</footer>
+
+<script>
+  // cursor glow (subtle, monochrome)
+  const glow = document.getElementById('glow');
+  let mx = innerWidth/2, my = innerHeight/2, gx = mx, gy = my;
+  addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; }, { passive: true });
+  (function loop(){ gx += (mx-gx)*.07; gy += (my-gy)*.07; glow.style.transform = `translate(${gx}px,${gy}px)`; requestAnimationFrame(loop); })();
+
+  // hero video parallax
+  const video = document.getElementById('heroVideo');
+  if (video) {
+    addEventListener('mousemove', e => {
+      const dx = (e.clientX / innerWidth - .5) * -18;
+      const dy = (e.clientY / innerHeight - .5) * -12;
+      video.style.transform = `scale(1.08) translate(${dx}px, ${dy}px)`;
+    }, { passive: true });
+  }
+
+  // reveal on scroll
+  const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }), { threshold: 0.18 });
+  document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+</script>
+</body>
+</html>
