@@ -121,6 +121,22 @@ footer { border-top: 1px solid var(--line); padding: 40px 32px; display: flex; j
 .product .price { margin-top: 20px; font-size: 14px; letter-spacing: .03em; color: var(--ink); }
 .products .note { text-align: center; color: var(--muted); font-size: 14px; font-weight: 300; margin-top: 54px; }
 
+/* ---- plans ---- */
+.plans { padding: 40px 0 120px; }
+.plans-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 26px; margin-top: 40px; align-items: stretch; }
+.plan { border: 1px solid var(--line); border-radius: 18px; padding: 38px 30px; display: flex; flex-direction: column; background: rgba(155,92,255,.04); transition: border-color .25s var(--ease), transform .25s var(--ease); }
+.plan:hover { border-color: rgba(155,92,255,.5); transform: translateY(-3px); }
+.plan.featured { border-color: rgba(155,92,255,.6); background: linear-gradient(180deg, rgba(155,92,255,.14), rgba(79,124,255,.06)); }
+.plan .tier { font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); margin-bottom: 14px; }
+.plan h3 { font-size: 23px; font-weight: 400; letter-spacing: -0.01em; margin-bottom: 14px; }
+.plan .price { font-size: 38px; font-weight: 300; letter-spacing: -0.02em; }
+.plan .price span { font-size: 15px; color: var(--muted); font-weight: 300; }
+.plan .desc { color: var(--muted); font-size: 14px; font-weight: 300; margin: 8px 0 24px; }
+.plan ul { list-style: none; margin-bottom: 30px; flex: 1; }
+.plan li { color: var(--muted); font-size: 14px; font-weight: 300; padding: 7px 0 7px 18px; position: relative; line-height: 1.5; }
+.plan li::before { content: ""; position: absolute; left: 0; top: 14px; width: 6px; height: 6px; border-radius: 50%; background: var(--grad); }
+.plan .btn { text-align: center; }
+
 .reveal { opacity: 0; transform: translateY(34px); transition: opacity 1s var(--ease), transform 1s var(--ease); }
 .reveal.in { opacity: 1; transform: none; }
 
