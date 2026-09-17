@@ -122,6 +122,8 @@ footer { border-top: 1px solid var(--line); padding: 40px 32px; display: flex; j
 .product h3 { font-size: 20px; font-weight: 400; letter-spacing: -0.01em; margin-bottom: 10px; }
 .product p { color: var(--muted); font-size: 14px; font-weight: 300; line-height: 1.6; }
 .product .price { margin-top: 20px; font-size: 14px; letter-spacing: .03em; color: var(--ink); }
+.product .buy { display: inline-block; margin-top: 12px; font-size: 13px; font-weight: 400; letter-spacing: .02em; color: var(--blue); transition: color .2s var(--ease); }
+.product .buy:hover { color: var(--purple); }
 .products .note { text-align: center; color: var(--muted); font-size: 14px; font-weight: 300; margin-top: 54px; }
 
 /* ---- plans ---- */
